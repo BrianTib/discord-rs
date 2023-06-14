@@ -1,7 +1,18 @@
 [package]
-name = "discordrs"
-version = "0.1.0"
+name = "discord-rs"
+description = "A rust library for interacting with the Discord API in a blazingly fast way"
+authors = ["Brian Tiburcio", "bptiburcio@gmail.com"]
 edition = "2021"
+rust-version = "rustc 1.70.0"
+version = "0.1.0"
+documentation = "https://docs.rs/discord-rs"
+homepage = "https://discordrs.io/"
+repository = "https://github.com/BrianTiburcio/discord-rs"
+license = "Apache-2.0"
+license-file = "LICENSE.txt"
+keywords = ["discord", "discord api", "discord bot", "discord webhook"]
+categories = ["api-bindings"]
+readme = "https://github.com/BrianTiburcio/discord-rs/blob/main/README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
