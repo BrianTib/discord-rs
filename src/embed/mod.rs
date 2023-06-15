@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 use chrono::{Utc, DateTime, TimeZone};
-use log::{Level, log_enabled, warn};
 
 pub mod types;
 pub use types::{
@@ -167,8 +166,8 @@ impl Embed {
         if let Some(ref mut fields) = self.fields {
             fields.push(field);
             
-            if fields.len() > 10 && log_enabled!(Level::Warn) {
-                warn!(target: "input_events", "The length of 'items' has reached the warning threshold");
+            if fields.len() > 10 {
+                panic!("The length of 'items' has reached the warning threshold");
             }
         } else {
             self.fields = Some(vec![field]);
