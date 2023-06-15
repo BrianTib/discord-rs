@@ -3,11 +3,14 @@
 // use std::env;
 // use std::collections::HashMap;
 
+pub mod client;
 pub mod webhook;
 pub mod embed;
 
-mod sample;
-
+mod examples {
+    pub mod client;
+    pub mod webhook;
+}
 fn main() {
-    sample::run();
+    examples::client::run();
 }
