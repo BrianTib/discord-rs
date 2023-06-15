@@ -1,3 +1,4 @@
 /target
 /.vscode
 /.ignore
+/src/sample.rs
