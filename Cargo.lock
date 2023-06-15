@@ -203,6 +203,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "dotenv",
+ "log 0.4.19",
  "reqwest",
  "serde",
  "serde_json",

@@ -16,8 +16,12 @@ pub use types::{
 
 //body["embeds"] = json!(embeds);
 impl WebhookClient {
-    pub fn new(id: String, token: String) -> WebhookClient {
-        WebhookClient { id, token, client: Client::new() }
+    pub fn new(id: &str, token: &str) -> WebhookClient {
+        WebhookClient {
+            id: id.to_string(),
+            token: token.to_string(),
+            client: Client::new()
+        }
     }
 
     pub async fn send(&self,
@@ -104,20 +108,28 @@ impl WebhookClient {
         let url = format!("https://discord.com/api/webhooks/{}/{}?wait=true", self.id, self.token);
         
 
-        println!("body: {:?}", body);
+        //println!("body: {:?}", body);
         let res = self.client
             .post(&url)
             .json(&body)
             .send()
-            .await
-            .ok()
-            .unwrap()
-            .text()
-            .await
-            .unwrap();
+            .await;
 
-        println!("{:?}", res);
-        Ok(())
+        if res.is_ok() {
+            return Ok(());
+        }
+
+        return Err("An unexpected error occured");
+        
+        // let text = res
+        //     .ok()
+        //     .unwrap()
+        //     .text()
+        //     .await
+        //     .unwrap();
+
+        // println!("{:?}", res);
+        // return Err(&format!("An unknown error occured. {:?}", res.));
     }
 }
 

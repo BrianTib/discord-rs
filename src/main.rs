@@ -14,19 +14,24 @@ use reqwest::Error;
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     // https://discord.com/api/webhooks/1118160739799158794/
-    let id = "1118160739799158794".to_string();
-    let token = "cVoyyJSQEwgDicj3M41EDIhVoGiIg1PDTN4wmaywIBQooXCThOLG6KfTFhjwEbI8IPRq".to_string();
+    let id = "1118160739799158794";
+    let token = "cVoyyJSQEwgDicj3M41EDIhVoGiIg1PDTN4wmaywIBQooXCThOLG6KfTFhjwEbI8IPRq";
 
     let mut embed = Embed::new();
     embed
-        .set_title("This is a test title".to_string())
-        .set_description("This is a description".to_string())
-        .set_footer("This is a footer".to_string(), None, None)
-        .set_author("I am the author".to_string(), None, None, None);
+        .set_author(
+            "Your mom",
+            None,
+            Some("https://e1.pxfuel.com/desktop-wallpaper/153/568/desktop-wallpaper-discord-neon-icon-discord-logo.jpg"),
+            None
+        )
+        .set_title("This is a test title")
+        .set_description("This is a description")
+        .set_footer("This is a footer", None, None);
 
     let webhook = WebhookClient::new(id, token);
     let _ = webhook.send(
-        Some("this is a test".to_string()),
+        Some("this is a test content".to_string()),
         Some(vec![&embed]),
         None,
         None,
