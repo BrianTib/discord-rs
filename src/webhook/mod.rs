@@ -1,59 +1,146 @@
 use serde_json::{Value};
-//use std::result::Result;
 use std::collections::HashMap;
 use reqwest::Client;
 
 use crate::embed::Embed;
 
-//use crate::request::post;
-
-mod types;
+pub mod types;
 pub use types::{
     WebhookClient,
     MessageCreateOptions,
-    MessageSendOptions
+    MessagePayload
 };
 
-//body["embeds"] = json!(embeds);
+impl MessagePayload {
+    //! # MessagePayload
+    //! 
+    //! `MessagePayload` is a struct that simplifies creating data to
+    //! send through the Discord API
+
+    pub fn new() -> &'static mut Self {
+        Box::leak(Box::new(Self {
+            content: None,
+            embeds: None,
+            username: None,
+            avatar_url: None,
+            tts: None,
+        }))
+    }
+
+    pub fn set_content(&mut self, content: &str) -> &mut Self {
+        if content.len() > 2000 {
+            panic!("content exceeds length of 2000 allowed by Discord's API")
+        }
+
+        self.content = Some(content.to_string());
+        self
+    }
+
+    pub fn set_username(&mut self, username: &str) -> &mut Self {
+        if username.len() > 256 {
+            panic!("username exceeds length of 256 allowed by Discord's API")
+        }
+
+        self.username = Some(username.to_string());
+        self
+    }
+
+    pub fn set_avatar(&mut self, avatar_url: &str) -> &mut Self {
+        self.avatar_url = Some(avatar_url.to_string());
+        self
+    }
+
+    pub fn set_tts(&mut self, tts: bool) -> &mut Self {
+        self.tts = Some(tts);
+        self
+    }
+
+    /// Sets the embeds of the message.
+    ///
+    /// # Arguments
+    ///
+    /// * `embeds` - An array slice of `Embed` objects representing the embeds to set.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Err` variant if the length of `embeds` exceeds the maximum allowed by the Discord API.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use discord-rs::webhook::MessagePayload;
+    /// 
+    /// let embeds = vec![embed1, embed2];
+    /// 
+    /// let message = MessagePayload::new()
+    /// message.set_embeds(&embeds).expect("Failed to set embeds");
+    /// ```
+    pub fn set_embeds(&mut self, embeds: &[Embed]) -> Result<&mut Self, &'static str> {
+        if let Some(existing_embeds) = &mut self.embeds {
+            existing_embeds.extend_from_slice(embeds);
+    
+            if existing_embeds.len() > 10 {
+                return Err("The length of 'embeds' has surpassed the amount allowed by the Discord API");
+            }
+        } else {
+            self.embeds = Some(embeds.to_vec());
+        }
+    
+        Ok(self)
+    }
+}
+
 impl WebhookClient {
-    pub fn new(id: &str, token: &str) -> WebhookClient {
-        WebhookClient {
+    pub fn new(id: &str, token: &str) -> Self {
+        Self {
+            client: Client::new(),
             id: id.to_string(),
             token: token.to_string(),
-            client: Client::new()
+            url: format!("https://discord.com/api/webhooks/{}/{}", id, token)
         }
     }
 
-    pub async fn send(&self,
-        content: Option<String>,
-        embeds: Option<Vec<&Embed>>,
-        username: Option<String>,
-        avatar_url: Option<String>,
-        tts: Option<bool>
-    ) -> Result<(), &'static str> {
+    /// Sends a message through the webhook
+    /// 
+    /// # Arguments
+    /// `payload` - A reference to a payload object
+    /// 
+    /// # Example
+    /// ```
+    /// use discord-rs::webhook::{WebhookClient, MessagePayload};
+    /// 
+    /// let webhook = WebhookClient::new("YOUR_ID", "YOUR_TOKEN");
+    /// let message_payload = MessagePayload::new()
+    ///     .set_username("Captain Hook")
+    ///     .set_content("Hello World!");
+    /// 
+    /// webhook.send(message_payload).await.expect("Failed to send webhook");
+    /// ```
+
+    pub async fn send(&self, payload: &MessagePayload) -> Result<(), &'static str> {
         let mut body: HashMap<String, Value> = HashMap::new();
     
-        if let Some(_content) = content {
-            body.insert("content".to_string(), Value::String(_content));
+        if let Some(ref _content) = payload.content {
+            body.insert("content".to_string(), Value::String(_content.to_string()));
         }
 
-        if let Some(_username) = username {
+        if let Some(ref _username) = payload.username {
             if _username.len() > 256 {
                 return Err("username length exceeded");
             }
 
-            body.insert("username".to_string(), Value::String(_username));
+            body.insert("username".to_string(), Value::String(_username.to_string()));
         }
 
-        if let Some(_avatar_url) = avatar_url {
-            body.insert("avatar_url".to_string(), Value::String(_avatar_url));
+        if let Some(ref _avatar_url) = payload.avatar_url {
+            body.insert("avatar_url".to_string(), Value::String(_avatar_url.to_string()));
         }
 
-        if let Some(_tts) = tts {
+        if let Some(_tts) = payload.tts {
             body.insert("tts".to_string(), Value::Bool(_tts));
         }
     
-        if let Some(_embeds) = embeds {
+        if let Some(ref _embeds) = payload.embeds {
             if _embeds.len() > 10 {
                 return Err("Embed length exceeded");
             }
@@ -105,9 +192,8 @@ impl WebhookClient {
             body.insert("embeds".to_string(), Value::Array(embed_values));
         }
     
-        let url = format!("https://discord.com/api/webhooks/{}/{}?wait=true", self.id, self.token);
+        let url = format!("{}?wait=true", self.url);
         
-
         //println!("body: {:?}", body);
         let res = self.client
             .post(&url)

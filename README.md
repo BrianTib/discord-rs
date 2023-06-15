@@ -27,7 +27,7 @@ discord-rs = "0.1.0"
 Here's a simple example of how to use discord-rs to send a message:
 
 ```rust
-use discord_rs::{Client, Context, EventHandler};
+use discord-rs::{Client, Context, EventHandler};
 
 struct MyHandler;
 

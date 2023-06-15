@@ -5,6 +5,7 @@ use reqwest::Client;
 pub struct WebhookClient {
     pub id: String,
     pub token: String,
+    pub url: String,
     pub client: Client
 }
 
@@ -17,9 +18,9 @@ pub struct MessageCreateOptions {
     thread_name: Option<String>
 }
 
-pub struct MessageSendOptions<'a> {
+pub struct MessagePayload {
     pub content: Option<String>,
-    pub embeds: Option<Vec<&'a Embed>>,
+    pub embeds: Option<Vec<Embed>>,
     pub username: Option<String>,
     pub avatar_url: Option<String>,
     pub tts: Option<bool>,

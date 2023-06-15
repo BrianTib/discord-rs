@@ -2,7 +2,7 @@
 use chrono::{Utc, DateTime, TimeZone};
 use log::{Level, log_enabled, warn};
 
-mod types;
+pub mod types;
 pub use types::{
     Embed,
     EmbedAuthor,
@@ -19,7 +19,7 @@ impl Embed {
     /// Creates a rich Embed object
     /// # Example
     /// ```
-    /// use discord_rs::embed::Embed;
+    /// use discord-rs::embed::Embed;
     /// 
     /// let embed = Embed::new();
     /// embed.set_author("Discord-rs", None, None, None)
@@ -354,7 +354,7 @@ impl Embed {
     /// # Examples
     ///
     /// ```
-    /// use discord_rs::embed::Embed;
+    /// use discord-rs::embed::Embed;
     ///
     /// let source_embed = Embed::new()
     /// source_embed
