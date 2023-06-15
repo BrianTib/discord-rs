@@ -4,7 +4,7 @@ discord-rs aims to be a blazingly fast library for interacting with the Discord 
 
 # Status
 
-discord-rs is in it's very early infancy and is not yet usable. However, I will be working eagetly to get us to a functional point. Stay tuned!
+discord-rs is in it's very early infancy and is not yet usable. However, I will be working eagerly to get us to a functional point. Stay tuned!
 
 ### License
 
