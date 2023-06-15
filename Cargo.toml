@@ -11,7 +11,7 @@ repository = "https://github.com/BrianTiburcio/discord-rs"
 license-file = "LICENSE.txt"
 keywords = ["discord", "discord api", "discord bot", "discord webhook"]
 categories = ["api-bindings"]
-readme = "https://raw.githubusercontent.com/BrianTiburcio/discord-rs/main/README.md"
+readme = "README.md"
 exclude = [
     "target/*",
     ".ignore/*",
