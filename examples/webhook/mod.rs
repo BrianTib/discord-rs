@@ -4,7 +4,7 @@ use reqwest::Error;
 use crate::embed::Embed;
 use crate::webhook::{WebhookClient, MessagePayload};
 
-pub async fn run() -> Result<(), Error> {
+pub async fn main() -> Result<(), Error> {
     // Your webhook's credentials
     let id = "YOUR_ID";
     let token = "YOUR_TOKEN";

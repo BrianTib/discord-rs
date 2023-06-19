@@ -1,8 +1,7 @@
 use reqwest::Client as ReqwestClient;
 use serde::{Serialize, Deserialize};
-use websocket::r#async::{Client as WebsocketClient, TcpListener};
-use websocket::r#async::client::TlsStream;
 use std::ops::Index;
+use std::collections::HashMap;
 
 pub struct Client {
     /// A tuple of intents. First element is a bitfield equivalent to the bits
@@ -10,13 +9,11 @@ pub struct Client {
     pub intents: (u32, Vec<GatewayIntentBits>),
     /// A string representing the token used to connect to an applications's bot
     pub token: String,
-    pub cache: Option<serde_json::Value>,
+    pub cache: HashMap<String, serde_json::Value>,
     pub ws: WebsocketConnection
 }
 
 pub struct WebsocketConnection {
-    /// A representation of the websocket connection to gateway.discord.com
-    pub connection: Option<WebsocketClient<TlsStream<TcpListener<>>>>,
     /// Used to create HTTP requests to the discord API
     pub client: ReqwestClient
 }
@@ -75,7 +72,6 @@ pub enum GatewayOpCode {
 }
 
 pub struct GatewayOpCodeIndexer;
-
 impl Index<usize> for GatewayOpCodeIndexer {
     type Output = GatewayOpCode;
 
@@ -94,6 +90,149 @@ impl Index<usize> for GatewayOpCodeIndexer {
             9 => &GatewayOpCode::InvalidSession,
             10 => &GatewayOpCode::Hello,
             11 => &GatewayOpCode::HeartbeatAcknowledge,
+            _ => panic!("Index out of bounds"),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+pub enum ReceiveEvent {
+    Hello,
+    Ready,
+    Resumed,
+    Reconnect,
+    InvalidSession,
+    ApplicationCommandPermissionsUpdate,
+    AutoModerationRuleCreate,
+    AutoModerationRuleUpdate,
+    AutoModerationRuleDelete,
+    AutoModerationActionExecution,
+    ChannelCreate,
+    ChannelUpdate,
+    ChannelDelete,
+    ChannelPinsUpdate,
+    ThreadCreate,
+    ThreadUpdate,
+    ThreadDelete,
+    ThreadListSync,
+    ThreadMemberUpdate,
+    ThreadMembersUpdate,
+    GuildCreate,
+    GuildUpdate,
+    GuildDelete,
+    GuildAuditLogEntryCreate,
+    GuildBanAdd,
+    GuildBanRemove,
+    GuildEmojisUpdate,
+    GuildStickersUpdate,
+    GuildIntegrationsUpdate,
+    GuildMemberAdd,
+    GuildMemberRemove,
+    GuildMemberUpdate,
+    GuildMembersChunk,
+    GuildRoleCreate,
+    GuildRoleUpdate,
+    GuildRoleDelete,
+    GuildScheduledEventCreate,
+    GuildScheduledEventUpdate,
+    GuildScheduledEventDelete,
+    GuildScheduledEventUserAdd,
+    GuildScheduledEventUserRemove,
+    IntegrationCreate,
+    IntegrationUpdate,
+    IntegrationDelete,
+    InteractionCreate,
+    InviteCreate,
+    InviteDelete,
+    MessageCreate,
+    MessageUpdate,
+    MessageDelete,
+    MessageDeleteBulk,
+    MessageReactionAdd,
+    MessageReactionRemove,
+    MessageReactionRemoveAll,
+    MessageReactionRemoveEmoji,
+    PresenceUpdate,
+    StageInstanceCreate,
+    StageInstanceUpdate,
+    StageInstanceDelete,
+    TypingStart,
+    UserUpdate,
+    VoiceStateUpdate,
+    VoiceServerUpdate,
+    WebhooksUpdate
+}
+
+pub struct ReceiveEventIndexer;
+impl Index<&str> for ReceiveEventIndexer {
+    type Output = ReceiveEvent;
+
+    fn index(&self, index: &str) -> &Self::Output {
+        match index {
+            "HELLO" => &ReceiveEvent::Hello,
+            "READY" => &ReceiveEvent::Ready,
+            "RESUMED" => &ReceiveEvent::Resumed,
+            "RECONNECT" => &ReceiveEvent::Reconnect,
+            "INVALID_SESSION" => &ReceiveEvent::InvalidSession,
+            "APPLICATION_COMMAND_PERMISSIONS_UPDATE" => &ReceiveEvent::ApplicationCommandPermissionsUpdate,
+            "AUTO_MODERATION_RULE_CREATE" => &ReceiveEvent::AutoModerationRuleCreate,
+            "AUTO_MODERATION_RULE_UPDATE" => &ReceiveEvent::AutoModerationRuleUpdate,
+            "AUTO_MODERATION_RULE_DELETE" => &ReceiveEvent::AutoModerationRuleDelete,
+            "AUTO_MODERATION_ACTION_EXECUTION" => &ReceiveEvent::AutoModerationActionExecution,
+            "CHANNEL_CREATE" => &ReceiveEvent::ChannelCreate,
+            "CHANNEL_UPDATE" => &ReceiveEvent::ChannelUpdate,
+            "CHANNEL_DELETE" => &ReceiveEvent::ChannelDelete,
+            "CHANNEL_PINS_UPDATE" => &ReceiveEvent::ChannelPinsUpdate,
+            "THREAD_CREATE" => &ReceiveEvent::ThreadCreate,
+            "THREAD_UPDATE" => &ReceiveEvent::ThreadUpdate,
+            "THREAD_DELETE" => &ReceiveEvent::ThreadDelete,
+            "THREAD_LIST_SYNC" => &ReceiveEvent::ThreadListSync,
+            "THREAD_MEMBER_UPDATE" => &ReceiveEvent::ThreadMemberUpdate,
+            "THREAD_MEMBERS_UPDATE" => &ReceiveEvent::ThreadMembersUpdate,
+            "GUILD_CREATE" => &ReceiveEvent::GuildCreate,
+            "GUILD_UPDATE" => &ReceiveEvent::GuildUpdate,
+            "GUILD_DELETE" => &ReceiveEvent::GuildDelete,
+            "GUILD_AUDIT_LOG_ENTRY_CREATE" => &ReceiveEvent::GuildAuditLogEntryCreate,
+            "GUILD_BAN_ADD" => &ReceiveEvent::GuildBanAdd,
+            "GUILD_BAN_REMOVE" => &ReceiveEvent::GuildBanRemove,
+            "GUILD_EMOJIS_UPDATE" => &ReceiveEvent::GuildEmojisUpdate,
+            "GUILD_STICKERS_UPDATE" => &ReceiveEvent::GuildStickersUpdate,
+            "GUILD_INTEGRATIONS_UPDATE" => &ReceiveEvent::GuildIntegrationsUpdate,
+            "GUILD_MEMBER_ADD" => &ReceiveEvent::GuildMemberAdd,
+            "GUILD_MEMBER_REMOVE" => &ReceiveEvent::GuildMemberRemove,
+            "GUILD_MEMBER_UPDATE" => &ReceiveEvent::GuildMemberUpdate,
+            "GUILD_MEMBERS_CHUNK" => &ReceiveEvent::GuildMembersChunk,
+            "GUILD_ROLE_CREATE" => &ReceiveEvent::GuildRoleCreate,
+            "GUILD_ROLE_UPDATE" => &ReceiveEvent::GuildRoleUpdate,
+            "GUILD_ROLE_DELETE" => &ReceiveEvent::GuildRoleDelete,
+            "GUILD_SCHEDULED_EVENT_CREATE" => &ReceiveEvent::GuildScheduledEventCreate,
+            "GUILD_SCHEDULED_EVENT_UPDATE" => &ReceiveEvent::GuildScheduledEventUpdate,
+            "GUILD_SCHEDULED_EVENT_DELETE" => &ReceiveEvent::GuildScheduledEventDelete,
+            "GUILD_SCHEDULED_EVENT_USER_ADD" => &ReceiveEvent::GuildScheduledEventUserAdd,
+            "GUILD_SCHEDULED_EVENT_USER_REMOVE" => &ReceiveEvent::GuildScheduledEventUserRemove,
+            "INTEGRATION_CREATE" => &ReceiveEvent::IntegrationCreate,
+            "INTEGRATION_UPDATE" => &ReceiveEvent::IntegrationUpdate,
+            "INTEGRATION_DELETE" => &ReceiveEvent::IntegrationDelete,
+            "INTERACTION_CREATE" => &ReceiveEvent::InteractionCreate,
+            "INVITE_CREATE" => &ReceiveEvent::InviteCreate,
+            "INVITE_DELETE" => &ReceiveEvent::InviteDelete,
+            "MESSAGE_CREATE" => &ReceiveEvent::MessageCreate,
+            "MESSAGE_UPDATE" => &ReceiveEvent::MessageUpdate,
+            "MESSAGE_DELETE" => &ReceiveEvent::MessageDelete,
+            "MESSAGE_DELETE_BULK" => &ReceiveEvent::MessageDeleteBulk,
+            "MESSAGE_REACTION_ADD" => &ReceiveEvent::MessageReactionAdd,
+            "MESSAGE_REACTION_REMOVE" => &ReceiveEvent::MessageReactionRemove,
+            "MESSAGE_REACTION_REMOVE_ALL" => &ReceiveEvent::MessageReactionRemoveAll,
+            "MESSAGE_REACTION_REMOVE_EMOJI" => &ReceiveEvent::MessageReactionRemoveEmoji,
+            "PRESENCE_UPDATE" => &ReceiveEvent::PresenceUpdate,
+            "STAGE_INSTANCE_CREATE" => &ReceiveEvent::StageInstanceCreate,
+            "STAGE_INSTANCE_UPDATE" => &ReceiveEvent::StageInstanceUpdate,
+            "STAGE_INSTANCE_DELETE" => &ReceiveEvent::StageInstanceDelete,
+            "TYPING_START" => &ReceiveEvent::TypingStart,
+            "USER_UPDATE" => &ReceiveEvent::UserUpdate,
+            "VOICE_STATE_UPDATE" => &ReceiveEvent::VoiceStateUpdate,
+            "VOICE_SERVER_UPDATE" => &ReceiveEvent::VoiceServerUpdate,
+            "WEBHOOKS_UPDATE" => &ReceiveEvent::WebhooksUpdate,
             _ => panic!("Index out of bounds"),
         }
     }

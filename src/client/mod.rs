@@ -1,18 +1,11 @@
 #[allow(dead_code, unused_imports)]
 use rand::Rng;
-use reqwest::{Client as ReqwestClient, header as ReqwestHeader};
-use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
-use serde_json::{Value, json};
-use websocket::client::builder;
-use std::sync::mpsc;
+use reqwest::{Client as ReqwestClient};
+use serde_json::{json};
 use std::time::Duration;
-use tokio::time::sleep;
-use tokio::runtime::Builder;
 use std::thread;
-use std::io::{Write, Read};
-use tungstenite::{connect, Message, WebSocket};
-use tungstenite::stream::MaybeTlsStream;
-use std::net::TcpStream;
+use tungstenite::{connect, Message};
+use std::collections::HashMap;
 
 pub mod types;
 pub use types::{
@@ -21,10 +14,10 @@ pub use types::{
     GatewayIntentBits,
     GatewayOpCode,
     GatewayOpCodeIndexer,
-    WebsocketConnection
+    WebsocketConnection,
+    ReceiveEvent,
+    ReceiveEventIndexer
 };
-
-use crate::client;
 
 impl Client {
     /// Creates a new Discord Bot Client
@@ -63,9 +56,8 @@ impl Client {
         Self {
             intents: (bits, intents.to_vec()),
             token: token.to_string(),
-            cache: None,
+            cache: HashMap::new(),
             ws: WebsocketConnection {
-                connection: None,
                 client: ReqwestClient::new()
             },
         }
@@ -84,8 +76,8 @@ impl Client {
     /// * If incoming data through the socket cannot be deserialized
     /// 
     /// # Errors
-    /// * Can error if contained websocket handler events fail ()
-    pub fn login(&self) -> Result<(), &'static str> {
+    /// * Can error if contained websocket handler events fail
+    pub fn login(&mut self) -> Result<(), &'static str> {
         // Establish a connection to the Discord event socket
         let (mut socket, _) = connect("wss://gateway.discord.gg/?v=10&encoding=json")
             .expect("Failed to connect to gateway");
@@ -120,7 +112,7 @@ impl Client {
                     let operation_code = GatewayOpCodeIndexer[event.op];
 
                     let res = match operation_code {
-                        GatewayOpCode::Dispatch => todo!(),
+                        GatewayOpCode::Dispatch => self.on_dispatch(event),
                         GatewayOpCode::Heartbeat => self.on_heartbeat(event),
                         GatewayOpCode::Identify => todo!(),
                         GatewayOpCode::PresenceUpdate => todo!(),
@@ -129,11 +121,12 @@ impl Client {
                         GatewayOpCode::Reconnect => todo!(),
                         GatewayOpCode::RequestGuildMembers => todo!(),
                         GatewayOpCode::InvalidSession => todo!(),
-                        GatewayOpCode::Hello => self.on_hello(event),
+                        GatewayOpCode::Hello => self.on_heartbeat(event),
                         GatewayOpCode::HeartbeatAcknowledge => self.on_heartbeat_ack(event)
                     };
 
                     if let Some(response) = res.unwrap() {
+                        println!("Sending response through socket: {:?}", response);
                         socket.write_message(response)
                             .expect(&format!("Failed to reply to event {:?}", operation_code));
                     }
@@ -162,20 +155,15 @@ impl Client {
         }
     }
 
-    fn on_hello(&self, event: GatewayEvent) -> Result<Option<Message>, &'static str> {
-        println!("Recieved hello event!");
-        if !event.d.is_some() {
-            return Err("Error")
-        }
-
-        Ok(None)
-    }
+    // fn on_hello(&self, event: GatewayEvent) -> Result<Option<Message>, &'static str> {
+    //     Ok(Some(self.on_heartbeat(event)))
+    // }
 
     fn on_heartbeat(&self, event: GatewayEvent) -> Result<Option<Message>, &'static str> {
-        println!("Recieved heartbeat!: Event: {:#?}", event);
+        println!("Recieved heartbeat!: Event data: {:#?}", event);
 
-        if !event.d.is_some() {
-            return Err("Error")
+        if event.d.is_none() {
+            return Err("Data is undefined")
         }
 
         let data = event.d.unwrap();
@@ -189,6 +177,7 @@ impl Client {
 
         // Calculate the total duration with jitter
         let total_duration = base_duration + jitter_duration;
+        println!("Sleeping before sending heartbeat");
         thread::sleep(total_duration);
 
         let response = GatewayEvent {
@@ -199,12 +188,34 @@ impl Client {
         };
 
         let message = Message::text(serde_json::to_string(&response).expect("Failed to stringify response gateway event"));
-        println!("Response message: {:#?}", message);
         Ok(Some(message))
     }
 
+    // 
     fn on_heartbeat_ack(&self, event: GatewayEvent) -> Result<Option<Message>, &'static str> {
         println!("Recieved heartbeat acknowledgement! {:#?}", event);
+        Ok(None)
+    }
+
+    /// Receives regular events from the socket
+    fn on_dispatch(&mut self, event: GatewayEvent) -> Result<Option<Message>, &'static str> {
+        if event.t.is_none() || event.d.is_none() {
+            return Err("Received unidentified event type/data");
+        }
+
+        let event_data = event.d.unwrap();
+        let event_type = event.t.unwrap();
+        let event_code = ReceiveEventIndexer[&event_type];
+
+        match event_code {
+            ReceiveEvent::Ready => {
+                self.cache.insert("ready".to_string(), event_data);
+            }
+            _ => {
+                println!("Receieved dispatch event. Event name: {}. Data: {:#?}", event_type, event_data);
+            }
+        }
+        
         Ok(None)
     }
 }

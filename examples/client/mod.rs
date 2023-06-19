@@ -1,7 +1,9 @@
 use crate::client::{Client, GatewayIntentBits};
+use dotenv;
 
-pub async fn run() {
-    let token = "MTExOTAyNzI4MDE5NTM2MjgzNg.GT43gu.QPivhaZu3nmWoHytboTwDxm_kB4ZSCNcmApPEk";
+pub async fn main() {
+    let token = &dotenv::var("DISCORD_TOKEN").unwrap();
+
     let client = Client::new(token, &[
         GatewayIntentBits::Guilds,
         GatewayIntentBits::GuildMessages,

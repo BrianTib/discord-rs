@@ -1,5 +1,10 @@
 /target
+
 /.vscode
 /.ignore
-/src/sample.rs
-/.vscode
+
+# Testing examples
+/src/example.rs
+
+# Env
+.env

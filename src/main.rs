@@ -4,11 +4,9 @@ pub mod embed;
 pub mod util;
 pub mod webhook;
 
-mod examples {
-    pub mod client;
-}
+mod example;
 
 #[tokio::main]
 async fn main() {
-    examples::client::run().await;
+    example::main().await;
 }
