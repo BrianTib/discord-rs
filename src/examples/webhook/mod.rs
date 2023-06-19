@@ -5,15 +5,15 @@ use crate::embed::Embed;
 use crate::webhook::{WebhookClient, MessagePayload};
 
 pub async fn run() -> Result<(), Error> {
-    let id = "1118160739799158794";
-    let token = "cVoyyJSQEwgDicj3M41EDIhVoGiIg1PDTN4wmaywIBQooXCThOLG6KfTFhjwEbI8IPRq";
+    // Your webhook's credentials
+    let id = "YOUR_ID";
+    let token = "YOUR_TOKEN";
 
-    let mut embed = Embed::new();
-    embed
+    let embed = Embed::new()
         .set_author(
-            "Embed Example",
+            "Captain Hook",
             None,
-            Some("https://e1.pxfuel.com/desktop-wallpaper/153/568/desktop-wallpaper-discord-neon-icon-discord-logo.jpg"),
+            Some("https://site.com/icon_url.jpg"),
             None
         )
         .set_title("This is a test title")
@@ -28,7 +28,10 @@ pub async fn run() -> Result<(), Error> {
         .set_embeds(&[embed])
         .unwrap();
 
-    webhook.send(message_payload).await.expect("Failed to send webhook");
+    webhook.send(message_payload)
+        .await
+        .expect("Failed to send webhook");
+    
     Ok(())
 }
 

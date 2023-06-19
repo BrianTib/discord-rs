@@ -9,15 +9,6 @@ pub struct WebhookClient {
     pub client: Client
 }
 
-pub struct MessageCreateOptions {
-    tts: Option<bool>,
-    flags: Option<String>,
-    username: Option<String>,
-    avatar_url: Option<String>,
-    thread_id: Option<String>,
-    thread_name: Option<String>
-}
-
 pub struct MessagePayload {
     pub content: Option<String>,
     pub embeds: Option<Vec<Embed>>,

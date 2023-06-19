@@ -29,12 +29,15 @@ chrono = { version = "0.4.26", features = ["serde"] }
 reqwest = { version = "0.11.18", features = ["json"] }
 serde = { version = "1.0.164", features = ["derive"] }
 serde_json = "1.0.96"
+tokio = { version = "1.28.2", features = ["full"] }
+rand = "0.8.5"
+colored = "2.0.0"
 websocket = "0.26.5"
+tungstenite = { version = "0.19.0", features = ["native-tls"] }
+http = "0.2.9"
 
 [dev-dependencies]
 dotenv = "0.15.0"
-log = "0.4.19"
-tokio = { version = "1.28.2", features = ["full"] }
 
 [profile.dev]
 opt-level = 0

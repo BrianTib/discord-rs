@@ -1,3 +1,4 @@
+#[allow(dead_code, unused_imports)]
 use serde_json::{Value};
 use std::collections::HashMap;
 use reqwest::Client;
@@ -7,88 +8,8 @@ use crate::embed::Embed;
 pub mod types;
 pub use types::{
     WebhookClient,
-    MessageCreateOptions,
     MessagePayload
 };
-
-impl MessagePayload {
-    //! # MessagePayload
-    //! 
-    //! `MessagePayload` is a struct that simplifies creating data to
-    //! send through the Discord API
-
-    pub fn new() -> &'static mut Self {
-        Box::leak(Box::new(Self {
-            content: None,
-            embeds: None,
-            username: None,
-            avatar_url: None,
-            tts: None,
-        }))
-    }
-
-    pub fn set_content(&mut self, content: &str) -> &mut Self {
-        if content.len() > 2000 {
-            panic!("content exceeds length of 2000 allowed by Discord's API")
-        }
-
-        self.content = Some(content.to_string());
-        self
-    }
-
-    pub fn set_username(&mut self, username: &str) -> &mut Self {
-        if username.len() > 256 {
-            panic!("username exceeds length of 256 allowed by Discord's API")
-        }
-
-        self.username = Some(username.to_string());
-        self
-    }
-
-    pub fn set_avatar(&mut self, avatar_url: &str) -> &mut Self {
-        self.avatar_url = Some(avatar_url.to_string());
-        self
-    }
-
-    pub fn set_tts(&mut self, tts: bool) -> &mut Self {
-        self.tts = Some(tts);
-        self
-    }
-
-    /// Sets the embeds of the message.
-    ///
-    /// # Arguments
-    ///
-    /// * `embeds` - An array slice of `Embed` objects representing the embeds to set.
-    ///
-    /// # Errors
-    ///
-    /// Returns an `Err` variant if the length of `embeds` exceeds the maximum allowed by the Discord API.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use discord-rs::webhook::MessagePayload;
-    /// 
-    /// let embeds = vec![embed1, embed2];
-    /// 
-    /// let message = MessagePayload::new()
-    /// message.set_embeds(&embeds).expect("Failed to set embeds");
-    /// ```
-    pub fn set_embeds(&mut self, embeds: &[Embed]) -> Result<&mut Self, &'static str> {
-        if let Some(existing_embeds) = &mut self.embeds {
-            existing_embeds.extend_from_slice(embeds);
-    
-            if existing_embeds.len() > 10 {
-                return Err("The length of 'embeds' has surpassed the amount allowed by the Discord API");
-            }
-        } else {
-            self.embeds = Some(embeds.to_vec());
-        }
-    
-        Ok(self)
-    }
-}
 
 impl WebhookClient {
     pub fn new(id: &str, token: &str) -> Self {
@@ -226,5 +147,84 @@ fn check_field_length(field: Option<&str>, limit: usize, error_message: &str) ->
         Err(error_message.to_string())
     } else {
         Ok(field_len)
+    }
+}
+
+impl MessagePayload {
+    //! # MessagePayload
+    //! 
+    //! `MessagePayload` is a struct that simplifies creating data to
+    //! send through the Discord API
+
+    pub fn new() -> &'static mut Self {
+        Box::leak(Box::new(Self {
+            content: None,
+            embeds: None,
+            username: None,
+            avatar_url: None,
+            tts: None,
+        }))
+    }
+
+    pub fn set_content(&mut self, content: &str) -> &mut Self {
+        if content.len() > 2000 {
+            panic!("content exceeds length of 2000 allowed by Discord's API")
+        }
+
+        self.content = Some(content.to_string());
+        self
+    }
+
+    pub fn set_username(&mut self, username: &str) -> &mut Self {
+        if username.len() > 256 {
+            panic!("username exceeds length of 256 allowed by Discord's API")
+        }
+
+        self.username = Some(username.to_string());
+        self
+    }
+
+    pub fn set_avatar(&mut self, avatar_url: &str) -> &mut Self {
+        self.avatar_url = Some(avatar_url.to_string());
+        self
+    }
+
+    pub fn set_tts(&mut self, tts: bool) -> &mut Self {
+        self.tts = Some(tts);
+        self
+    }
+
+    /// Sets the embeds of the message.
+    ///
+    /// # Arguments
+    ///
+    /// * `embeds` - An array slice of `Embed` objects representing the embeds to set.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Err` variant if the length of `embeds` exceeds the maximum allowed by the Discord API.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use discord-rs::webhook::MessagePayload;
+    /// 
+    /// let embeds = vec![embed1, embed2];
+    /// 
+    /// let message = MessagePayload::new()
+    /// message.set_embeds(&embeds).expect("Failed to set embeds");
+    /// ```
+    pub fn set_embeds(&mut self, embeds: &[Embed]) -> Result<&mut Self, &'static str> {
+        if let Some(existing_embeds) = &mut self.embeds {
+            existing_embeds.extend_from_slice(embeds);
+    
+            if existing_embeds.len() > 10 {
+                return Err("The length of 'embeds' has surpassed the amount allowed by the Discord API");
+            }
+        } else {
+            self.embeds = Some(embeds.to_vec());
+        }
+    
+        Ok(self)
     }
 }

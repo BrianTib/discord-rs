@@ -1,16 +1,14 @@
 #[allow(dead_code)]
-// use dotenv::dotenv;
-// use std::env;
-// use std::collections::HashMap;
-
 pub mod client;
-pub mod webhook;
 pub mod embed;
+pub mod util;
+pub mod webhook;
 
 mod examples {
     pub mod client;
-    pub mod webhook;
 }
-fn main() {
-    examples::client::run();
+
+#[tokio::main]
+async fn main() {
+    examples::client::run().await;
 }
