@@ -1,11 +1,19 @@
+use futures_util::stream::SplitSink;
 #[allow(dead_code, unused_imports)]
 use rand::Rng;
-use reqwest::{Client as ReqwestClient};
+use reqwest::Client as ReqwestClient;
 use serde_json::{json};
-use std::time::Duration;
-use std::thread;
-use tungstenite::{connect, Message};
+use tokio_tungstenite::MaybeTlsStream;
 use std::collections::HashMap;
+use tokio::net::TcpStream;
+use tokio::spawn;
+use std::time::Duration;
+use tokio::time::sleep;
+use tokio_tungstenite::{connect_async, WebSocketStream};
+use tokio_tungstenite::tungstenite::Message;
+use futures_util::{StreamExt, SinkExt, FutureExt};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub mod types;
 pub use types::{
@@ -63,6 +71,10 @@ impl Client {
         }
     }
 
+    pub fn as_ref(&self) -> &Self { self }
+    pub fn as_mut(&mut self) -> &mut Self { self }
+    pub fn as_arc(self) -> Arc<Mutex<Self>> { Arc::new(Mutex::new(self)) }
+
     /// This function should only be called once per process
     /// 
     /// Sends a [GatewayOpCode::Identify] [GatewayEvent] to Discord
@@ -77,81 +89,88 @@ impl Client {
     /// 
     /// # Errors
     /// * Can error if contained websocket handler events fail
-    pub fn login(&mut self) -> Result<(), &'static str> {
-        // Establish a connection to the Discord event socket
-        let (mut socket, _) = connect("wss://gateway.discord.gg/?v=10&encoding=json")
-            .expect("Failed to connect to gateway");
+    pub async fn login(client_arc: Arc<Client>) -> Result<(), &'static str> {
+        // Connect to the WebSocket endpoint
+        let (socket, _) = connect_async("wss://gateway.discord.gg/?v=10&encoding=json")
+            .await
+            .expect("Failed to connect to WebSocket");
 
-        // Send the initial handshake
+        let (mut writer, mut reader) = socket.split();
+
+        // Create the initial payload
         let identify = GatewayEvent {
             op: GatewayOpCode::Identify as usize,
-            d: Some(json!({
-                "token": self.token,
-                "intents": self.intents.0,
-                "properties": {
-                    "os": "win",
-                    "browser": "discord-rs",
-                    "device": "discord_rs"
-                }
-            })),
             s: None,
             t: None,
+            d: Some(json!({
+                "token": client_arc.token,
+                "intents": client_arc.intents.0,
+                "properties": {
+                    "os": std::env::consts::OS,
+                    "browser": "The discord",
+                    "device": "discord_rs"
+                }
+            }))
         };
 
         let identify = serde_json::to_string(&identify).unwrap();
-
-        socket.write_message(Message::text(identify))
-            .expect("Failed to identify");
+        let _ = writer.send(Message::text(identify));
 
         loop {
-            match socket.read_message().unwrap() {
-                Message::Text(text_message) => {
-                    let event = serde_json::from_str::<GatewayEvent>(&text_message)
-                        .expect("Failed to deserialize incoming data JSON");
+            let incoming = reader.next().await.unwrap();
+            let client = client_arc.clone();
 
-                    let operation_code = GatewayOpCodeIndexer[event.op];
+            let _ = tokio::spawn(async move {
+                let lock = client.lock().await;
 
-                    let res = match operation_code {
-                        GatewayOpCode::Dispatch => self.on_dispatch(event),
-                        GatewayOpCode::Heartbeat => self.on_heartbeat(event),
-                        GatewayOpCode::Identify => todo!(),
-                        GatewayOpCode::PresenceUpdate => todo!(),
-                        GatewayOpCode::VoiceStateUpdate => todo!(),
-                        GatewayOpCode::Resume => todo!(),
-                        GatewayOpCode::Reconnect => todo!(),
-                        GatewayOpCode::RequestGuildMembers => todo!(),
-                        GatewayOpCode::InvalidSession => todo!(),
-                        GatewayOpCode::Hello => self.on_heartbeat(event),
-                        GatewayOpCode::HeartbeatAcknowledge => self.on_heartbeat_ack(event)
-                    };
-
-                    if let Some(response) = res.unwrap() {
-                        println!("Sending response through socket: {:?}", response);
-                        socket.write_message(response)
-                            .expect(&format!("Failed to reply to event {:?}", operation_code));
-                    }
-                },
-
-                Message::Binary(binary_message) => {
-                    println!("Received binary message: {:?}", binary_message);
-                },
-
-                Message::Ping(ping_message) => {
-                    println!("Received ping message: {:?}", ping_message);
-                },
-
-                Message::Pong(pong_message) => {
-                    println!("Received pong message: {:?}", pong_message);
-                },
-
-                Message::Close(close_message) => {
-                    println!("Received close message: {:?}", close_message);
-                },
-
-                Message::Frame(frame) => {
-                    println!("Received frame message: {:?}", frame);
-                },
-            }
+                match incoming.unwrap() {
+                    Message::Text(text_message) => {
+                        let event = serde_json::from_str::<GatewayEvent>(&text_message)
+                            .expect("Failed to deserialize incoming data JSON");
+            
+                        let operation_code = GatewayOpCodeIndexer[event.op];
+            
+                        let res = match operation_code {
+                            GatewayOpCode::Dispatch => client.on_dispatch(event),
+                            GatewayOpCode::Heartbeat => client.on_heartbeat(event).await,
+                            GatewayOpCode::Identify => todo!(),
+                            GatewayOpCode::PresenceUpdate => todo!(),
+                            GatewayOpCode::VoiceStateUpdate => todo!(),
+                            GatewayOpCode::Resume => todo!(),
+                            GatewayOpCode::Reconnect => todo!(),
+                            GatewayOpCode::RequestGuildMembers => todo!(),
+                            GatewayOpCode::InvalidSession => todo!(),
+                            GatewayOpCode::Hello => client.on_heartbeat(event).await,
+                            GatewayOpCode::HeartbeatAcknowledge => client.on_heartbeat_ack(event)
+                        };
+            
+                        if let Some(response) = res.unwrap() {
+                            println!("Sending response through socket: {:?}", response);
+                            let _ = writer.send(response);
+                        }
+                    },
+            
+                    Message::Binary(binary_message) => {
+                        println!("Received binary message: {:?}", binary_message);
+                    },
+            
+                    Message::Ping(ping_message) => {
+                        println!("Received ping message: {:?}", ping_message);
+                    },
+            
+                    Message::Pong(pong_message) => {
+                        println!("Received pong message: {:?}", pong_message);
+                    },
+            
+                    Message::Close(close_message) => {
+                        println!("Received close message: {:?}", close_message);
+                    },
+            
+                    Message::Frame(frame) => {
+                        println!("Received frame message: {:?}", frame);
+                    },
+                }
+            });
         }
     }
 
@@ -159,7 +178,7 @@ impl Client {
     //     Ok(Some(self.on_heartbeat(event)))
     // }
 
-    fn on_heartbeat(&self, event: GatewayEvent) -> Result<Option<Message>, &'static str> {
+    async fn on_heartbeat(&self, event: GatewayEvent) -> Result<Option<Message>, &'static str> {
         println!("Recieved heartbeat!: Event data: {:#?}", event);
 
         if event.d.is_none() {
@@ -178,7 +197,7 @@ impl Client {
         // Calculate the total duration with jitter
         let total_duration = base_duration + jitter_duration;
         println!("Sleeping before sending heartbeat");
-        thread::sleep(total_duration);
+        sleep(total_duration).await;
 
         let response = GatewayEvent {
             op: 1,
