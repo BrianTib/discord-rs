@@ -2,6 +2,7 @@ use reqwest::Client as ReqwestClient;
 use serde::{Serialize, Deserialize};
 use std::ops::Index;
 use std::collections::HashMap;
+use tokio::sync::mpsc::{Sender, Receiver};
 
 pub struct Client {
     /// A tuple of intents. First element is a bitfield equivalent to the bits
@@ -14,6 +15,8 @@ pub struct Client {
 }
 
 pub struct WebsocketConnection {
+    pub keepalive: Option<Sender<GatewayEvent>>,
+    pub receiver: Option<Receiver<GatewayEvent>>,
     /// Used to create HTTP requests to the discord API
     pub client: ReqwestClient
 }
@@ -25,7 +28,7 @@ pub struct SessionStartLimitObject {
     pub max_concurrency: u16
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GatewayEvent {
     pub op: usize,
     pub d: Option<serde_json::Value>,
@@ -56,7 +59,7 @@ pub enum GatewayIntentBits {
     AutoModerationExecution
 }
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
 pub enum GatewayOpCode {
     Dispatch,
     Heartbeat,

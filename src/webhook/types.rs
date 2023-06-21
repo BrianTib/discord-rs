@@ -3,9 +3,9 @@ use crate::embed::Embed;
 use reqwest::Client;
 
 pub struct WebhookClient {
-    pub id: String,
-    pub token: String,
-    pub url: String,
+    pub id: Option<String>,
+    pub token: Option<String>,
+    pub url: Option<String>,
     pub client: Client
 }
 
