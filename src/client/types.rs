@@ -1,21 +1,42 @@
+use futures_util::sink::SinkExt;
+use futures_util::stream::{StreamExt, SplitSink, SplitStream};
 use reqwest::Client as ReqwestClient;
 use serde::{Serialize, Deserialize};
-use std::ops::Index;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tokio_tungstenite::{WebSocketStream, MaybeTlsStream};
+use tungstenite::Message;
 use std::collections::HashMap;
+use std::ops::Index;
+use tokio::{
+    sync::mpsc::{Sender, Receiver},
+    net::TcpStream
+};
 
 pub struct Client {
     /// A tuple of intents. First element is a bitfield equivalent to the bits
     /// of the second element
-    pub intents: (u32, Vec<GatewayIntentBits>),
+    pub intents: u64,
     /// A string representing the token used to connect to an applications's bot
     pub token: String,
     pub cache: HashMap<String, serde_json::Value>,
-    pub ws: WebsocketConnection
+    pub _connection: Option<Arc<Mutex<Connection>>>
+}
+
+pub struct Connection {
+    pub keepalive: KeepAliveConnection,
+    pub socket: WebsocketConnection, 
+    pub http_client: ReqwestClient
+}
+
+pub struct KeepAliveConnection {
+    pub sender: Sender<GatewayEvent>,
+    pub receiver: Receiver<GatewayEvent> 
 }
 
 pub struct WebsocketConnection {
-    /// Used to create HTTP requests to the discord API
-    pub client: ReqwestClient
+    pub sender: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
+    pub receiver: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>
 }
 
 pub struct SessionStartLimitObject {
@@ -25,7 +46,7 @@ pub struct SessionStartLimitObject {
     pub max_concurrency: u16
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GatewayEvent {
     pub op: usize,
     pub d: Option<serde_json::Value>,
@@ -56,7 +77,7 @@ pub enum GatewayIntentBits {
     AutoModerationExecution
 }
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
 pub enum GatewayOpCode {
     Dispatch,
     Heartbeat,

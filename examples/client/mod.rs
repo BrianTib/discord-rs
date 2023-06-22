@@ -1,4 +1,4 @@
-use crate::client::{Client, GatewayIntentBits};
+use discord_rs::client::{Client, GatewayIntentBits};
 use dotenv;
 
 pub async fn main() {

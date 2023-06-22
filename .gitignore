@@ -1,10 +1,12 @@
 /target
+Cargo.lock
 
 /.vscode
 /.ignore
 
 # Testing examples
 /src/example.rs
+/src/main.rs
 
 # Env
 .env

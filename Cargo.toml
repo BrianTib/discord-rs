@@ -2,7 +2,7 @@
 name = "discord-rs"
 version = "0.1.1"
 description = "A rust library for interacting with the Discord API in a blazingly fast way"
-authors = ["Brian Tiburcio", "bptiburcio@gmail.com"]
+authors = ["Brian T. bptiburcio@gmail.com"]
 edition = "2021"
 rust-version = "1.70.0"
 documentation = "https://docs.rs/discord-rs"
@@ -28,6 +28,7 @@ include = [
 chrono = { version = "0.4.26", features = ["serde"] }
 colored = "2.0.0"
 dotenv = "0.15.0"
+futures-util = "0.3.28"
 rand = "0.8.5"
 reqwest = { version = "0.11.18", features = ["json"] }
 serde = { version = "1.0.164", features = ["derive"] }
@@ -36,7 +37,6 @@ tokio = { version = "1.28.2", features = ["full"] }
 tokio-tungstenite = { version = "0.19.0", features = ["native-tls"] }
 tungstenite = { version = "0.19.0", features = ["native-tls"] }
 http = "0.2.9"
-futures-util = "0.3.28"
 native-tls = "0.2.11"
 
 [dev-dependencies]
