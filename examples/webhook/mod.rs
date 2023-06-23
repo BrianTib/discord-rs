@@ -4,7 +4,7 @@ use reqwest::Error;
 use crate::embed::Embed;
 use crate::webhook::{WebhookClient, MessagePayload};
 
-pub async fn main() -> Result<(), Error> {
+async fn main() -> Result<(), Error> {
     // Your webhook's credentials
     let id = "YOUR_ID";
     let token = "YOUR_TOKEN";
@@ -34,19 +34,3 @@ pub async fn main() -> Result<(), Error> {
     
     Ok(())
 }
-
-// fn test() {
-//     let client = ClientBuilder::new("ws://127.0.0.1:3012");
-// //     listen("127.0.0.1:3012", |out| {
-// //         move |msg| {
-// //             out.send(msg)
-// //         }
-// //     })
-// }
-
-// async fn main() {
-//     dotenv().ok();
-    
-//     let database_url = env::var("TEST").expect("TEST must be set");
-//     println!("{}", database_url);
-// }

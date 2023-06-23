@@ -165,15 +165,13 @@ dependencies = [
 
 [[package]]
 name = "discord-rs"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "colored",
  "dotenv",
  "futures-util",
- "http",
  "native-tls",
- "rand",
  "reqwest",
  "serde",
  "serde_json",

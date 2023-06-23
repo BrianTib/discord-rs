@@ -4,8 +4,6 @@ pub mod embed;
 pub mod util;
 pub mod webhook;
 
-pub mod threader;
-
 mod example;
 
 #[tokio::main]

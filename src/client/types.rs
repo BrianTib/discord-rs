@@ -7,6 +7,7 @@ use tokio::sync::Mutex;
 use tokio_tungstenite::{WebSocketStream, MaybeTlsStream};
 use tungstenite::Message;
 use std::collections::HashMap;
+use std::marker::Send;
 use std::ops::Index;
 use tokio::{
     sync::mpsc::{Sender, Receiver},
@@ -20,18 +21,19 @@ pub struct Client {
     /// A string representing the token used to connect to an applications's bot
     pub token: String,
     pub cache: HashMap<String, serde_json::Value>,
+    pub handler: Box<dyn EventHandler>,
     pub _connection: Option<Arc<Mutex<Connection>>>
 }
 
 pub struct Connection {
-    pub keepalive: KeepAliveConnection,
+    pub event_pipeline: EventPipelineConnection,
     pub socket: WebsocketConnection, 
     pub http_client: ReqwestClient
 }
 
-pub struct KeepAliveConnection {
-    pub sender: Sender<GatewayEvent>,
-    pub receiver: Receiver<GatewayEvent> 
+pub struct EventPipelineConnection {
+    pub sender: Sender<(GatewayEventType, GatewayEvent)>,
+    pub receiver: Receiver<(GatewayEventType, GatewayEvent)> 
 }
 
 pub struct WebsocketConnection {
@@ -78,7 +80,7 @@ pub enum GatewayIntentBits {
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
-pub enum GatewayOpCode {
+pub enum GatewayEventType {
     Dispatch,
     Heartbeat,
     Identify,
@@ -92,32 +94,32 @@ pub enum GatewayOpCode {
     HeartbeatAcknowledge
 }
 
-pub struct GatewayOpCodeIndexer;
-impl Index<usize> for GatewayOpCodeIndexer {
-    type Output = GatewayOpCode;
+pub struct GatewayEventTypeIndexer;
+impl Index<usize> for GatewayEventTypeIndexer {
+    type Output = GatewayEventType;
 
     fn index(&self, index: usize) -> &Self::Output {
         match index {
-            0 => &GatewayOpCode::Dispatch,
-            1 => &GatewayOpCode::Heartbeat,
-            2 => &GatewayOpCode::Identify,
-            3 => &GatewayOpCode::PresenceUpdate,
-            4 => &GatewayOpCode::VoiceStateUpdate,
+            0 => &GatewayEventType::Dispatch,
+            1 => &GatewayEventType::Heartbeat,
+            2 => &GatewayEventType::Identify,
+            3 => &GatewayEventType::PresenceUpdate,
+            4 => &GatewayEventType::VoiceStateUpdate,
             // 5 is purposefully skipped
             // https://discord.com/developers/docs/topics/opcodes-and-status-codes#gateway-gateway-opcodes
-            6 => &GatewayOpCode::Resume,
-            7 => &GatewayOpCode::Reconnect,
-            8 => &GatewayOpCode::RequestGuildMembers,
-            9 => &GatewayOpCode::InvalidSession,
-            10 => &GatewayOpCode::Hello,
-            11 => &GatewayOpCode::HeartbeatAcknowledge,
+            6 => &GatewayEventType::Resume,
+            7 => &GatewayEventType::Reconnect,
+            8 => &GatewayEventType::RequestGuildMembers,
+            9 => &GatewayEventType::InvalidSession,
+            10 => &GatewayEventType::Hello,
+            11 => &GatewayEventType::HeartbeatAcknowledge,
             _ => panic!("Index out of bounds"),
         }
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
-pub enum ReceiveEvent {
+pub enum GatewayDispatchEventType {
     Hello,
     Ready,
     Resumed,
@@ -184,77 +186,81 @@ pub enum ReceiveEvent {
     WebhooksUpdate
 }
 
-pub struct ReceiveEventIndexer;
-impl Index<&str> for ReceiveEventIndexer {
-    type Output = ReceiveEvent;
+pub struct GatewayDispatchEventTypeIndexer;
+impl Index<&str> for GatewayDispatchEventTypeIndexer {
+    type Output = GatewayDispatchEventType;
 
     fn index(&self, index: &str) -> &Self::Output {
         match index {
-            "HELLO" => &ReceiveEvent::Hello,
-            "READY" => &ReceiveEvent::Ready,
-            "RESUMED" => &ReceiveEvent::Resumed,
-            "RECONNECT" => &ReceiveEvent::Reconnect,
-            "INVALID_SESSION" => &ReceiveEvent::InvalidSession,
-            "APPLICATION_COMMAND_PERMISSIONS_UPDATE" => &ReceiveEvent::ApplicationCommandPermissionsUpdate,
-            "AUTO_MODERATION_RULE_CREATE" => &ReceiveEvent::AutoModerationRuleCreate,
-            "AUTO_MODERATION_RULE_UPDATE" => &ReceiveEvent::AutoModerationRuleUpdate,
-            "AUTO_MODERATION_RULE_DELETE" => &ReceiveEvent::AutoModerationRuleDelete,
-            "AUTO_MODERATION_ACTION_EXECUTION" => &ReceiveEvent::AutoModerationActionExecution,
-            "CHANNEL_CREATE" => &ReceiveEvent::ChannelCreate,
-            "CHANNEL_UPDATE" => &ReceiveEvent::ChannelUpdate,
-            "CHANNEL_DELETE" => &ReceiveEvent::ChannelDelete,
-            "CHANNEL_PINS_UPDATE" => &ReceiveEvent::ChannelPinsUpdate,
-            "THREAD_CREATE" => &ReceiveEvent::ThreadCreate,
-            "THREAD_UPDATE" => &ReceiveEvent::ThreadUpdate,
-            "THREAD_DELETE" => &ReceiveEvent::ThreadDelete,
-            "THREAD_LIST_SYNC" => &ReceiveEvent::ThreadListSync,
-            "THREAD_MEMBER_UPDATE" => &ReceiveEvent::ThreadMemberUpdate,
-            "THREAD_MEMBERS_UPDATE" => &ReceiveEvent::ThreadMembersUpdate,
-            "GUILD_CREATE" => &ReceiveEvent::GuildCreate,
-            "GUILD_UPDATE" => &ReceiveEvent::GuildUpdate,
-            "GUILD_DELETE" => &ReceiveEvent::GuildDelete,
-            "GUILD_AUDIT_LOG_ENTRY_CREATE" => &ReceiveEvent::GuildAuditLogEntryCreate,
-            "GUILD_BAN_ADD" => &ReceiveEvent::GuildBanAdd,
-            "GUILD_BAN_REMOVE" => &ReceiveEvent::GuildBanRemove,
-            "GUILD_EMOJIS_UPDATE" => &ReceiveEvent::GuildEmojisUpdate,
-            "GUILD_STICKERS_UPDATE" => &ReceiveEvent::GuildStickersUpdate,
-            "GUILD_INTEGRATIONS_UPDATE" => &ReceiveEvent::GuildIntegrationsUpdate,
-            "GUILD_MEMBER_ADD" => &ReceiveEvent::GuildMemberAdd,
-            "GUILD_MEMBER_REMOVE" => &ReceiveEvent::GuildMemberRemove,
-            "GUILD_MEMBER_UPDATE" => &ReceiveEvent::GuildMemberUpdate,
-            "GUILD_MEMBERS_CHUNK" => &ReceiveEvent::GuildMembersChunk,
-            "GUILD_ROLE_CREATE" => &ReceiveEvent::GuildRoleCreate,
-            "GUILD_ROLE_UPDATE" => &ReceiveEvent::GuildRoleUpdate,
-            "GUILD_ROLE_DELETE" => &ReceiveEvent::GuildRoleDelete,
-            "GUILD_SCHEDULED_EVENT_CREATE" => &ReceiveEvent::GuildScheduledEventCreate,
-            "GUILD_SCHEDULED_EVENT_UPDATE" => &ReceiveEvent::GuildScheduledEventUpdate,
-            "GUILD_SCHEDULED_EVENT_DELETE" => &ReceiveEvent::GuildScheduledEventDelete,
-            "GUILD_SCHEDULED_EVENT_USER_ADD" => &ReceiveEvent::GuildScheduledEventUserAdd,
-            "GUILD_SCHEDULED_EVENT_USER_REMOVE" => &ReceiveEvent::GuildScheduledEventUserRemove,
-            "INTEGRATION_CREATE" => &ReceiveEvent::IntegrationCreate,
-            "INTEGRATION_UPDATE" => &ReceiveEvent::IntegrationUpdate,
-            "INTEGRATION_DELETE" => &ReceiveEvent::IntegrationDelete,
-            "INTERACTION_CREATE" => &ReceiveEvent::InteractionCreate,
-            "INVITE_CREATE" => &ReceiveEvent::InviteCreate,
-            "INVITE_DELETE" => &ReceiveEvent::InviteDelete,
-            "MESSAGE_CREATE" => &ReceiveEvent::MessageCreate,
-            "MESSAGE_UPDATE" => &ReceiveEvent::MessageUpdate,
-            "MESSAGE_DELETE" => &ReceiveEvent::MessageDelete,
-            "MESSAGE_DELETE_BULK" => &ReceiveEvent::MessageDeleteBulk,
-            "MESSAGE_REACTION_ADD" => &ReceiveEvent::MessageReactionAdd,
-            "MESSAGE_REACTION_REMOVE" => &ReceiveEvent::MessageReactionRemove,
-            "MESSAGE_REACTION_REMOVE_ALL" => &ReceiveEvent::MessageReactionRemoveAll,
-            "MESSAGE_REACTION_REMOVE_EMOJI" => &ReceiveEvent::MessageReactionRemoveEmoji,
-            "PRESENCE_UPDATE" => &ReceiveEvent::PresenceUpdate,
-            "STAGE_INSTANCE_CREATE" => &ReceiveEvent::StageInstanceCreate,
-            "STAGE_INSTANCE_UPDATE" => &ReceiveEvent::StageInstanceUpdate,
-            "STAGE_INSTANCE_DELETE" => &ReceiveEvent::StageInstanceDelete,
-            "TYPING_START" => &ReceiveEvent::TypingStart,
-            "USER_UPDATE" => &ReceiveEvent::UserUpdate,
-            "VOICE_STATE_UPDATE" => &ReceiveEvent::VoiceStateUpdate,
-            "VOICE_SERVER_UPDATE" => &ReceiveEvent::VoiceServerUpdate,
-            "WEBHOOKS_UPDATE" => &ReceiveEvent::WebhooksUpdate,
+            "HELLO" => &GatewayDispatchEventType::Hello,
+            "READY" => &GatewayDispatchEventType::Ready,
+            "RESUMED" => &GatewayDispatchEventType::Resumed,
+            "RECONNECT" => &GatewayDispatchEventType::Reconnect,
+            "INVALID_SESSION" => &GatewayDispatchEventType::InvalidSession,
+            "APPLICATION_COMMAND_PERMISSIONS_UPDATE" => &GatewayDispatchEventType::ApplicationCommandPermissionsUpdate,
+            "AUTO_MODERATION_RULE_CREATE" => &GatewayDispatchEventType::AutoModerationRuleCreate,
+            "AUTO_MODERATION_RULE_UPDATE" => &GatewayDispatchEventType::AutoModerationRuleUpdate,
+            "AUTO_MODERATION_RULE_DELETE" => &GatewayDispatchEventType::AutoModerationRuleDelete,
+            "AUTO_MODERATION_ACTION_EXECUTION" => &GatewayDispatchEventType::AutoModerationActionExecution,
+            "CHANNEL_CREATE" => &GatewayDispatchEventType::ChannelCreate,
+            "CHANNEL_UPDATE" => &GatewayDispatchEventType::ChannelUpdate,
+            "CHANNEL_DELETE" => &GatewayDispatchEventType::ChannelDelete,
+            "CHANNEL_PINS_UPDATE" => &GatewayDispatchEventType::ChannelPinsUpdate,
+            "THREAD_CREATE" => &GatewayDispatchEventType::ThreadCreate,
+            "THREAD_UPDATE" => &GatewayDispatchEventType::ThreadUpdate,
+            "THREAD_DELETE" => &GatewayDispatchEventType::ThreadDelete,
+            "THREAD_LIST_SYNC" => &GatewayDispatchEventType::ThreadListSync,
+            "THREAD_MEMBER_UPDATE" => &GatewayDispatchEventType::ThreadMemberUpdate,
+            "THREAD_MEMBERS_UPDATE" => &GatewayDispatchEventType::ThreadMembersUpdate,
+            "GUILD_CREATE" => &GatewayDispatchEventType::GuildCreate,
+            "GUILD_UPDATE" => &GatewayDispatchEventType::GuildUpdate,
+            "GUILD_DELETE" => &GatewayDispatchEventType::GuildDelete,
+            "GUILD_AUDIT_LOG_ENTRY_CREATE" => &GatewayDispatchEventType::GuildAuditLogEntryCreate,
+            "GUILD_BAN_ADD" => &GatewayDispatchEventType::GuildBanAdd,
+            "GUILD_BAN_REMOVE" => &GatewayDispatchEventType::GuildBanRemove,
+            "GUILD_EMOJIS_UPDATE" => &GatewayDispatchEventType::GuildEmojisUpdate,
+            "GUILD_STICKERS_UPDATE" => &GatewayDispatchEventType::GuildStickersUpdate,
+            "GUILD_INTEGRATIONS_UPDATE" => &GatewayDispatchEventType::GuildIntegrationsUpdate,
+            "GUILD_MEMBER_ADD" => &GatewayDispatchEventType::GuildMemberAdd,
+            "GUILD_MEMBER_REMOVE" => &GatewayDispatchEventType::GuildMemberRemove,
+            "GUILD_MEMBER_UPDATE" => &GatewayDispatchEventType::GuildMemberUpdate,
+            "GUILD_MEMBERS_CHUNK" => &GatewayDispatchEventType::GuildMembersChunk,
+            "GUILD_ROLE_CREATE" => &GatewayDispatchEventType::GuildRoleCreate,
+            "GUILD_ROLE_UPDATE" => &GatewayDispatchEventType::GuildRoleUpdate,
+            "GUILD_ROLE_DELETE" => &GatewayDispatchEventType::GuildRoleDelete,
+            "GUILD_SCHEDULED_EVENT_CREATE" => &GatewayDispatchEventType::GuildScheduledEventCreate,
+            "GUILD_SCHEDULED_EVENT_UPDATE" => &GatewayDispatchEventType::GuildScheduledEventUpdate,
+            "GUILD_SCHEDULED_EVENT_DELETE" => &GatewayDispatchEventType::GuildScheduledEventDelete,
+            "GUILD_SCHEDULED_EVENT_USER_ADD" => &GatewayDispatchEventType::GuildScheduledEventUserAdd,
+            "GUILD_SCHEDULED_EVENT_USER_REMOVE" => &GatewayDispatchEventType::GuildScheduledEventUserRemove,
+            "INTEGRATION_CREATE" => &GatewayDispatchEventType::IntegrationCreate,
+            "INTEGRATION_UPDATE" => &GatewayDispatchEventType::IntegrationUpdate,
+            "INTEGRATION_DELETE" => &GatewayDispatchEventType::IntegrationDelete,
+            "INTERACTION_CREATE" => &GatewayDispatchEventType::InteractionCreate,
+            "INVITE_CREATE" => &GatewayDispatchEventType::InviteCreate,
+            "INVITE_DELETE" => &GatewayDispatchEventType::InviteDelete,
+            "MESSAGE_CREATE" => &GatewayDispatchEventType::MessageCreate,
+            "MESSAGE_UPDATE" => &GatewayDispatchEventType::MessageUpdate,
+            "MESSAGE_DELETE" => &GatewayDispatchEventType::MessageDelete,
+            "MESSAGE_DELETE_BULK" => &GatewayDispatchEventType::MessageDeleteBulk,
+            "MESSAGE_REACTION_ADD" => &GatewayDispatchEventType::MessageReactionAdd,
+            "MESSAGE_REACTION_REMOVE" => &GatewayDispatchEventType::MessageReactionRemove,
+            "MESSAGE_REACTION_REMOVE_ALL" => &GatewayDispatchEventType::MessageReactionRemoveAll,
+            "MESSAGE_REACTION_REMOVE_EMOJI" => &GatewayDispatchEventType::MessageReactionRemoveEmoji,
+            "PRESENCE_UPDATE" => &GatewayDispatchEventType::PresenceUpdate,
+            "STAGE_INSTANCE_CREATE" => &GatewayDispatchEventType::StageInstanceCreate,
+            "STAGE_INSTANCE_UPDATE" => &GatewayDispatchEventType::StageInstanceUpdate,
+            "STAGE_INSTANCE_DELETE" => &GatewayDispatchEventType::StageInstanceDelete,
+            "TYPING_START" => &GatewayDispatchEventType::TypingStart,
+            "USER_UPDATE" => &GatewayDispatchEventType::UserUpdate,
+            "VOICE_STATE_UPDATE" => &GatewayDispatchEventType::VoiceStateUpdate,
+            "VOICE_SERVER_UPDATE" => &GatewayDispatchEventType::VoiceServerUpdate,
+            "WEBHOOKS_UPDATE" => &GatewayDispatchEventType::WebhooksUpdate,
             _ => panic!("Index out of bounds"),
         }
     }
+}
+
+pub trait EventHandler: Send {
+    fn on_message(&self);
 }
