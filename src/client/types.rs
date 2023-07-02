@@ -1,16 +1,16 @@
+#[allow(dead_code, unused_variables, unused_imports)]
 use futures_util::sink::SinkExt;
 use futures_util::stream::{StreamExt, SplitSink, SplitStream};
 use reqwest::Client as ReqwestClient;
+use serde_json::Value;
 use serde::{Serialize, Deserialize};
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tokio_tungstenite::{WebSocketStream, MaybeTlsStream};
-use tungstenite::Message;
 use std::collections::HashMap;
 use std::marker::Send;
 use std::ops::Index;
+use tokio_tungstenite::{WebSocketStream, MaybeTlsStream};
+use tungstenite::Message;
 use tokio::{
-    sync::mpsc::{Sender, Receiver},
+    sync::mpsc::Receiver,
     net::TcpStream
 };
 
@@ -21,26 +21,16 @@ pub struct Client {
     /// A string representing the token used to connect to an applications's bot
     pub token: String,
     pub cache: HashMap<String, serde_json::Value>,
-    pub handler: Box<dyn EventHandler>,
-    pub _connection: Option<Arc<Mutex<Connection>>>
+    pub events: Option<Receiver<(GatewayDispatchEventType, Value)>>,
 }
-
 pub struct Connection {
-    pub event_pipeline: EventPipelineConnection,
     pub socket: WebsocketConnection, 
     pub http_client: ReqwestClient
 }
-
-pub struct EventPipelineConnection {
-    pub sender: Sender<(GatewayEventType, GatewayEvent)>,
-    pub receiver: Receiver<(GatewayEventType, GatewayEvent)> 
-}
-
 pub struct WebsocketConnection {
     pub sender: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
     pub receiver: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>
 }
-
 pub struct SessionStartLimitObject {
     pub total: i32,
     pub remaining: i32,
@@ -118,7 +108,7 @@ impl Index<usize> for GatewayEventTypeIndexer {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
 pub enum GatewayDispatchEventType {
     Hello,
     Ready,

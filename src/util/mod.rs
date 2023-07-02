@@ -1,5 +1,6 @@
-use colored::*;
 use chrono::Local;
+use colored::*;
+use std::time::Duration;
 
 pub fn log_message(kind: &str, message: &str) {
     let current_time = Local::now().format("%Y-%m-%d %H:%M:%S");

@@ -30,44 +30,44 @@ dotenv = "*"
 use dotenv;
 
 fn main() {
-	let  token  =  dotenv::var("DISCORD_TOKEN").unwrap();
+  let token = dotenv::var("DISCORD_TOKEN").unwrap();
 }
 ```
 
 ### Webhooks
 
 ```rust
-use  discord_rs::embed::Embed;
-use  discord_rs::webhook::{WebhookClient, MessagePayload};
+use discord_rs::embed::Embed;
+use discord_rs::webhook::{WebhookClient, MessagePayload};
 
 #[tokio:main]
 async fn main() {
-	// Your webhook's credentials
-	let id =  "YOUR_ID";
-	let token =  "YOUR_TOKEN";
-	
-	let webhook =  WebhookClient::new(id, token);
-	
-	let embed =  Embed::new()
-		.set_author(
-			"Captain Hook",
-			None,
-			Some("https://site.com/icon_url.jpg"),
-			None
-		)
-		.set_title("This is a test title")
-		.set_description("This is a description")
-		.set_footer("This is a footer", None, None);
+    // Your webhook's credentials
+  let id =  "YOUR_ID";
+  let token =  "YOUR_TOKEN";
 
-	let message_payload =  MessagePayload::new()
-		.set_username("Captain Hook")
-		.set_content("Hello World!")
-		.set_embeds(&[embed])
-		.unwrap();
+  let webhook =  WebhookClient::new(id, token);
 
-	webhook.send(message_payload)
-		.await
-		.expect("Failed to send webhook");
+  let embed =  Embed::new()
+    .set_author(
+      "Captain Hook",
+      None,
+      Some("https://site.com/icon_url.jpg"),
+      None
+    )
+    .set_title("This is a test title")
+    .set_description("This is a description")
+    .set_footer("This is a footer", None, None);
+
+  let message_payload =  MessagePayload::new()
+    .set_username("Captain Hook")
+    .set_content("Hello World!")
+    .set_embeds(&[embed])
+    .unwrap();
+
+  webhook.send(message_payload)
+    .await
+    .expect("Failed to send webhook");
 }
 ```
  

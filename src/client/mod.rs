@@ -1,13 +1,18 @@
+use futures_util::TryStreamExt;
 #[allow(dead_code, unused_imports)]
 use futures_util::{stream::{StreamExt, SplitSink}, sink::SinkExt};
 use reqwest::{Client as ReqwestClient};
 use serde_json::{Value, json};
-use std::collections::HashMap;
+use std::{collections::HashMap, thread::park_timeout};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
-use tokio::sync::mpsc;
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc::{self, Receiver, Sender}, Mutex};
+use tokio::time::{timeout, sleep};
+//use std::thread::sleep;
+
+pub mod user;
+pub use user::types::ClientUser;
 
 pub mod types;
 pub use types::{
@@ -18,7 +23,6 @@ pub use types::{
     GatewayIntentBits,
     GatewayEventType,
     GatewayEventTypeIndexer,
-    EventPipelineConnection,
     GatewayDispatchEventType,
     GatewayDispatchEventTypeIndexer,
     WebsocketConnection
@@ -51,7 +55,7 @@ impl Client {
     ///         .expect("Failed to login");
     /// }
     /// ```
-    pub fn new(token: &str, intents: &[GatewayIntentBits], handler: Box<dyn EventHandler>) -> Self {
+    pub fn new(token: &str, intents: &[GatewayIntentBits]) -> Self {
         let bits = intents
             .iter()
             .fold(0, |acc, intent| {
@@ -62,8 +66,7 @@ impl Client {
             intents: bits,
             token: token.to_string(),
             cache: HashMap::new(),
-            handler,
-            _connection: None
+            events: None,
         }
     }
 
@@ -73,142 +76,148 @@ impl Client {
             .await
             .expect("Failed to connect to gateway");
 
-        let (sender, receiver) = socket.split();
-        let (tx, rx) = mpsc::channel::<(GatewayEventType, GatewayEvent)>(100);
+        let (mut sender, receiver) = socket.split();
+        let (etx, erx) = mpsc::channel::<(GatewayDispatchEventType, Value)>(100);
 
-        let connection = Arc::new(Mutex::new(Connection {
-            event_pipeline: EventPipelineConnection {
-                sender: tx,
-                receiver: rx,
-            },
-            socket: WebsocketConnection {
-                sender,
-                receiver
-            },
-            http_client: ReqwestClient::new()
-        }));
-        
-        let token_clone = self.token.clone();
-        let intents_clone = self.intents.clone();
-        
-        self._connection = Some(Arc::clone(&connection));
+        // Send the identify payload
+        let identify = _get_identify(&self.token, &self.intents);
+        let _ = sender.send(identify).await;
 
-        let catcher_task = tokio::spawn(_catch_events(Arc::clone(&connection)));
-        let heartbeats_task = tokio::spawn(_start_beating(Arc::clone(&connection), token_clone, intents_clone));
+        let socket_mutex = Arc::new(Mutex::new(WebsocketConnection { sender, receiver }));
+        let heartbeat_socket = Arc::clone(&socket_mutex);
+        self.events = Some(erx);
 
-        tokio::try_join!(
-            catcher_task,
-            heartbeats_task
-        ).unwrap();
-
-        // Begin catching and handling the events being received from the 
-        // socket at a struct level
-        self._start_pipeline().await;
-    }
-
-    // Catches events from the socket and dispels the appropriate ones
-    // to the handler
-    async fn _start_pipeline(&mut self) {
-        let mut connection = self._connection.as_mut().unwrap().lock().await;
-
-        // Receive events from the channel
-        while let Some((event_type, _event)) = connection.event_pipeline.receiver.recv().await {
-            match event_type {
-                GatewayEventType::Dispatch => {
-                    println!("Got pipeline dispatch event");
-                },
-                _ => {}
-            }
-        }
+        tokio::task::spawn(
+            _event_listener(
+                socket_mutex,
+                Arc::new(Mutex::new(etx))
+            )
+        );
     }
 }
 
-/// Catches all incoming events directly from the gateway socket
-/// and sends them over to either the heatbeat loop or the handler to
-/// be consumed by the client
-async fn _catch_events(connection: Arc<Mutex<Connection>>) {
-    tokio::spawn(async move {
-        let mut connection = connection.lock().await;
-
-        while let Some(Ok(message)) = connection.socket.receiver.next().await {
-            match message {
-                Message::Text(text_message) => {
-                    let event = serde_json::from_str::<GatewayEvent>(&text_message)
-                        .expect("Failed to deserialize incoming data JSON");
+async fn _event_listener(
+    socket: Arc<Mutex<WebsocketConnection>>,
+    event_channel: Arc<Mutex<Sender<(GatewayDispatchEventType, Value)>>>,
+) {
+    let event_channel = event_channel.lock().await;
     
-                    let event_type = GatewayEventTypeIndexer[event.op];
-                    let _ = connection.event_pipeline.sender.send((event_type, event.to_owned()));
-                    println!("Caught event! {:?}", event_type);
-                },
-                Message::Close(_) => {
-                    // Handle a close message and exit the loop
-                    println!("Received close message. Exiting...");
-                    break;
-                }
-                _ => {
-                    // Handle other types of messages if needed
-                    // For example: Message::Binary, Message::Pong, Message::Continuation
-                }
-            }
-        }
-    });
-}
+    let mut socket = socket.lock().await;
+    let mut next_heartbeat: Option<Instant> = None;
+    let mut interval: u64 = 0;
+    let mut last_sequence: u64 = 0;
 
-async fn _start_beating(connection: Arc<Mutex<Connection>>, token: String, intents: u64) {
-    let thread_connection = Arc::clone(&connection);
-
-    let mut connection = connection.lock().await;
-    let (mut sequence, mut interval): (u64, u64) = (0, 0);
-
-    // Cannot do something like while interval == 0 && let Some()...
-    // https://github.com/rust-lang/rust/issues/53667
-    // Use loop instead
-
-    println!("Going inside beating loop");
+    // Create a timer that checks if we should reply to a heartbeat every 500 milliseconds
+    let mut heartbeat_timer = tokio::time::interval(Duration::from_millis(500));
 
     loop {
-        if interval != 0 { break; }
-        println!("Going inside beating loop");
+        tokio::select! {
+            message = socket.receiver.try_next() => {
+                // If there are no incoming messages to handle, continue to the next iteration
+                let message = message.expect("Error while reading socket stream");
+                if message.is_none() { continue; }
 
-        // Catch the hello event which will tell us at what
-        // pace we need to heartbeat to
-        while let Some((event_type, event)) = connection.event_pipeline.receiver.recv().await {
-            println!("Got event to iniate heartbeat loop: {:?}", event_type);
-            match event_type {
-                GatewayEventType::Hello => {
-                    let data = event.d.unwrap();
-                    interval = data["heartbeat_interval"].as_u64()
-                        .expect("Failed to extract interval from hearbeat init");
-                },
-                _ => {}
+                // At this point, there is a message we can handle.
+                let message = message.unwrap();
+                last_sequence += 1;
+
+                match message {
+                    Message::Text(text_message) => {
+                        let event = serde_json::from_str::<GatewayEvent>(&text_message)
+                            .expect("Failed to deserialize incoming data JSON");
+
+                        let event_type = GatewayEventTypeIndexer[event.op];
+                        
+                        println!("Caught event! {:?}", event_type);
+
+                        match event_type {
+                            GatewayEventType::Dispatch => {
+                                let dispatch_data = event.d.unwrap();
+                                let dispatch_type = event.t
+                                    .as_ref()
+                                    .and_then(|t| Some(t.as_str()))
+                                    .and_then(|dispatch_type| Some(GatewayDispatchEventTypeIndexer[dispatch_type]))
+                                    .expect("Failed to deserialize event type for dispatch event");
+
+                                if dispatch_type == GatewayDispatchEventType::Ready {
+                                    println!("Got ready event data!: {:?}", dispatch_data);
+                                }
+                                
+                                let _ = event_channel.send((dispatch_type, dispatch_data)).await;
+                            },
+                            GatewayEventType::Heartbeat => todo!(),
+                            GatewayEventType::Identify => todo!(),
+                            GatewayEventType::PresenceUpdate => todo!(),
+                            GatewayEventType::VoiceStateUpdate => todo!(),
+                            GatewayEventType::Resume => todo!(),
+                            GatewayEventType::Reconnect => todo!(),
+                            GatewayEventType::RequestGuildMembers => todo!(),
+                            GatewayEventType::InvalidSession => todo!(),
+                            GatewayEventType::Hello => {
+                                let data = event.d.unwrap();
+                                interval = data["heartbeat_interval"].as_u64().unwrap();
+                                next_heartbeat = None;
+
+                                let heartbeat = _get_heartbeat(last_sequence); 
+                                let _ = socket.sender.send(heartbeat).await;
+                            },
+                            GatewayEventType::HeartbeatAcknowledge => {
+                                next_heartbeat = Some(Instant::now() + Duration::from_millis(interval));
+                            },
+                        };
+                    },
+                    Message::Close(_) => {
+                        // Handle a close message and exit the loop
+                        println!("Received close message. Exiting...");
+                        break;
+                    },
+                    _ => {
+                        // Handle other types of messages if needed
+                        // For example: Message::Binary, Message::Pong, Message::Continuation
+                        println!("Got unhandled message type");
+                    }
+                }
+            },
+            _ = heartbeat_timer.tick() => {
+                // Sends a heartbeat if needed
+                _check_heartbeat(&mut next_heartbeat, last_sequence, &mut socket).await;
             }
-
-            // Send the initial identify payload
-            let identify = _get_identify(token.to_owned(), intents);
-            let _ = connection.socket.sender.send(identify).await;
         }
     }
-
-    // We need to wait for a small jitter before starting to send heartbeats
-    tokio::time::sleep(Duration::from_millis(800)).await;
-
-    tokio::spawn(async move {
-        loop {
-            let mut connection = thread_connection.lock().await;
-    
-            println!("Inside heartbeat loop");
-            let heartbeat = _get_heartbeat(sequence).await;
-            sequence += 1;
-    
-            let _= connection.socket.sender.send(heartbeat).await;
-            
-            println!("Sent heartbeat! Waiting until next loop");
-            let _ = tokio::time::sleep(Duration::from_millis(interval)).await;
-        }
-    });   
 }
 
-fn _get_identify(token: String, intents: u64) -> Message {
+async fn _check_heartbeat(
+    instant: &mut Option<Instant>,
+    sequence: u64,
+    socket: &mut WebsocketConnection,
+) {
+    // We dont have a current heartbeat to check for
+    if instant.is_none() { return; }
+    let now = Instant::now();
+    // Not enough time has passed
+    if now < instant.unwrap() { return; }
+
+    if let Err(_) = socket.sender.send(_get_heartbeat(sequence)).await {
+        println!("Failed to send heartbeat reply");
+        return;
+    }
+
+    *instant = None;
+}
+
+fn _get_heartbeat(sequence: u64) -> Message {
+    let heartbeat = GatewayEvent {
+        op: GatewayEventType::Heartbeat as usize,
+        d: Some(Value::Number(sequence.into())),
+        s: None,
+        t: None,
+    };
+
+    let heartbeat = serde_json::to_string(&heartbeat).unwrap();
+    Message::text(heartbeat)                            
+}
+
+fn _get_identify(token: &String, intents: &u64) -> Message {
     // Structure the initial identify request
     let identify = GatewayEvent {
         op: GatewayEventType::Identify as usize,
@@ -228,17 +237,4 @@ fn _get_identify(token: String, intents: u64) -> Message {
     // Serialize the identify request into JSON
     let identify = serde_json::to_string(&identify).unwrap();
     return Message::text(identify);
-}
-
-async fn _get_heartbeat(sequence: u64) -> Message {
-    let heartbeat = GatewayEvent {
-        op: GatewayEventType::Heartbeat as usize,
-        d: Some(if sequence == 0 { Value::Null } else { Value::Number(sequence.into()) }),
-        s: None,
-        t: None,
-    };
-
-    // Serialize the heartbeat request into JSON
-    let heartbeat = serde_json::to_string(&heartbeat).unwrap();
-    return Message::text(heartbeat);
 }
