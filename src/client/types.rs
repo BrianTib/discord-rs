@@ -1,26 +1,25 @@
 #[allow(dead_code, unused_variables, unused_imports)]
 use futures_util::sink::SinkExt;
-use futures_util::stream::{StreamExt, SplitSink, SplitStream};
+use futures_util::stream::{SplitSink, SplitStream};
 use reqwest::Client as ReqwestClient;
 use serde_json::Value;
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
-use std::marker::Send;
+use std::sync::Arc;
 use std::ops::Index;
 use tokio_tungstenite::{WebSocketStream, MaybeTlsStream};
-use tungstenite::Message;
+use tungstenite::Message as TungsteniteMessage;
 use tokio::{
-    sync::mpsc::Receiver,
+    sync::{mpsc::Receiver, Mutex},
     net::TcpStream
 };
 
+use crate::client::ClientCache;
+
 pub struct Client {
-    /// A tuple of intents. First element is a bitfield equivalent to the bits
-    /// of the second element
     pub intents: u64,
-    /// A string representing the token used to connect to an applications's bot
     pub token: String,
-    pub cache: HashMap<String, serde_json::Value>,
+    pub client: ReqwestClient,
+    pub cache: Arc<Mutex<ClientCache>>,
     pub events: Option<Receiver<(GatewayDispatchEventType, Value)>>,
 }
 pub struct Connection {
@@ -28,7 +27,7 @@ pub struct Connection {
     pub http_client: ReqwestClient
 }
 pub struct WebsocketConnection {
-    pub sender: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
+    pub sender: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, TungsteniteMessage>,
     pub receiver: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>
 }
 pub struct SessionStartLimitObject {
@@ -63,6 +62,7 @@ pub enum GatewayIntentBits {
     GuildMessageTyping,
     DirectMessages,
     DirectmessageReactions,
+    DirectmessageTyping,
     MessageContent,
     GuildScheduledEvents,
     AutoModerationConfiguration,
@@ -249,8 +249,4 @@ impl Index<&str> for GatewayDispatchEventTypeIndexer {
             _ => panic!("Index out of bounds"),
         }
     }
-}
-
-pub trait EventHandler: Send {
-    fn on_message(&self);
 }

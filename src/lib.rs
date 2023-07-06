@@ -18,6 +18,13 @@
 //! For detailed usage examples, please refer to the documentation of each module.
 
 pub mod client;
-pub mod embed;
-pub mod util;
-pub mod webhook;
+pub mod structs {
+    pub mod channel;
+    pub mod embed;
+    pub mod guild;
+    pub mod member;
+    pub mod message;
+    pub mod role;
+    pub mod user;
+    pub mod webhook;
+}

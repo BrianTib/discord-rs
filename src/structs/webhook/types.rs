@@ -1,5 +1,5 @@
 #[allow(dead_code)]
-use crate::embed::Embed;
+use crate::structs::embed::Embed;
 use reqwest::Client;
 
 pub struct WebhookClient {

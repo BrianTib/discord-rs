@@ -2,13 +2,13 @@
 
 # Discord-RS
 
-**discord-rs** aims to be a blazingly fast  Rust library for interacting with the Discord API. It provides a simple and efficient way to build Discord bots, webhooks, create rich embeds, send messages, manage channels, and more.
+**discord-rs** aims to be a blazingly fast  Rust library for interacting with the Discord API. It provides a simple and efficient way to build Discord bots, webhooks, create rich embeds, send messages, create slash commands, manage channels, and more.
 
 ## Status
 
 **discord-rs** is in it's very early infancy and is not yet usable. However, I will be working eagerly to get us to a functional point. Stay tuned!
 
-Keep up to date with development on our [Discord Server](https://discord.gg/RT4q6Y7Xkh)
+You can keep up to date with development on our [Discord Server](https://discord.gg/RT4q6Y7Xkh)
 
 ## Getting Started
 
@@ -34,15 +34,18 @@ fn main() {
 }
 ```
 
-### Webhooks
+# Examples
+
+## Webhooks
+Before you can setup webhooks using discord-rs, you will need to create a webhook integration. Go to the settings for the channel you want to make a webhook for and in the integrations tab select "Create Webhook". From ther you can copy the webhook token and use it in your code.
 
 ```rust
 use discord_rs::embed::Embed;
 use discord_rs::webhook::{WebhookClient, MessagePayload};
 
-#[tokio:main]
+#[tokio::main]
 async fn main() {
-    // Your webhook's credentials
+  // Your webhook's credentials
   let id =  "YOUR_ID";
   let token =  "YOUR_TOKEN";
 

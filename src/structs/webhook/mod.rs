@@ -3,7 +3,7 @@ use serde_json::{Value};
 use std::collections::HashMap;
 use reqwest::Client;
 
-use crate::embed::Embed;
+use crate::structs::embed::Embed;
 
 pub mod types;
 pub use types::{

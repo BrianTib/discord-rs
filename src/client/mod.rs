@@ -1,32 +1,17 @@
 use futures_util::TryStreamExt;
 #[allow(dead_code, unused_imports)]
 use futures_util::{stream::{StreamExt, SplitSink}, sink::SinkExt};
-use reqwest::{Client as ReqwestClient};
+use reqwest::Client as ReqwestClient;
 use serde_json::{Value, json};
-use std::{collections::HashMap, thread::park_timeout};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
-use tokio::sync::{mpsc::{self, Receiver, Sender}, Mutex};
-use tokio::time::{timeout, sleep};
-//use std::thread::sleep;
+use tokio::sync::{mpsc::{self, Sender}, Mutex};
 
-pub mod user;
-pub use user::types::ClientUser;
-
+pub mod cache;
 pub mod types;
-pub use types::{
-    Client,
-    Connection,
-    GatewayEvent,
-    EventHandler,
-    GatewayIntentBits,
-    GatewayEventType,
-    GatewayEventTypeIndexer,
-    GatewayDispatchEventType,
-    GatewayDispatchEventTypeIndexer,
-    WebsocketConnection
-};
+pub use cache::types::ClientCache;
+pub use types::*;
 
 impl Client {
     /// Creates a new Discord Bot Client
@@ -43,14 +28,14 @@ impl Client {
     /// 
     /// #[tokio::main]
     /// async fn main() {
-    ///     let mut client = Client::new(&[
+    ///     let token = "YOUR_TOKEN";
+    ///     let intents = &[
     ///         GatewayIntentBits::Guilds,
     ///         GatewayIntentBits::GuildMessages,
-    ///         GatewayIntentBits::DirectMessages,
-    ///     ]);
-    /// 
-    ///     let token = "YOUR_TOKEN";
-    ///     client.login(token)
+    ///         GatewayIntentBits::DirectMessages
+    ///     ];
+    ///     let mut client = Client::new(token, intents);
+    ///     client.connect(token)
     ///         .await
     ///         .expect("Failed to login");
     /// }
@@ -65,13 +50,14 @@ impl Client {
         Self {
             intents: bits,
             token: token.to_string(),
-            cache: HashMap::new(),
+            cache: Arc::new(Mutex::new(ClientCache::new())),
+            client: ReqwestClient::new(),
             events: None,
         }
     }
 
-    pub async fn connect(&mut self) {
-        // Establish a connection to the gateway
+    /// Connects the client to the Discord Gateway webhook
+    pub async fn connect(&mut self) -> Result<(), &'static str> {
         let (socket, _) = connect_async("wss://gateway.discord.gg/?v=10&encoding=json")
             .await
             .expect("Failed to connect to gateway");
@@ -84,20 +70,23 @@ impl Client {
         let _ = sender.send(identify).await;
 
         let socket_mutex = Arc::new(Mutex::new(WebsocketConnection { sender, receiver }));
-        let heartbeat_socket = Arc::clone(&socket_mutex);
         self.events = Some(erx);
 
         tokio::task::spawn(
             _event_listener(
                 socket_mutex,
+                Arc::clone(&self.cache),
                 Arc::new(Mutex::new(etx))
             )
         );
+
+        Ok(())
     }
 }
 
 async fn _event_listener(
     socket: Arc<Mutex<WebsocketConnection>>,
+    cache: Arc<Mutex<ClientCache>>,
     event_channel: Arc<Mutex<Sender<(GatewayDispatchEventType, Value)>>>,
 ) {
     let event_channel = event_channel.lock().await;
@@ -127,8 +116,6 @@ async fn _event_listener(
                             .expect("Failed to deserialize incoming data JSON");
 
                         let event_type = GatewayEventTypeIndexer[event.op];
-                        
-                        println!("Caught event! {:?}", event_type);
 
                         match event_type {
                             GatewayEventType::Dispatch => {
@@ -140,9 +127,10 @@ async fn _event_listener(
                                     .expect("Failed to deserialize event type for dispatch event");
 
                                 if dispatch_type == GatewayDispatchEventType::Ready {
-                                    println!("Got ready event data!: {:?}", dispatch_data);
+                                    let cache_data: ClientCache = serde_json::from_value(dispatch_data.clone()).unwrap();
+                                    *cache.lock().await = cache_data;
                                 }
-                                
+
                                 let _ = event_channel.send((dispatch_type, dispatch_data)).await;
                             },
                             GatewayEventType::Heartbeat => todo!(),
@@ -178,9 +166,9 @@ async fn _event_listener(
                     }
                 }
             },
+            // Sends a heartbeat if needed
             _ = heartbeat_timer.tick() => {
-                // Sends a heartbeat if needed
-                _check_heartbeat(&mut next_heartbeat, last_sequence, &mut socket).await;
+                _check_heartbeat(&mut next_heartbeat, &mut socket, last_sequence).await;
             }
         }
     }
@@ -188,8 +176,8 @@ async fn _event_listener(
 
 async fn _check_heartbeat(
     instant: &mut Option<Instant>,
-    sequence: u64,
     socket: &mut WebsocketConnection,
+    sequence: u64
 ) {
     // We dont have a current heartbeat to check for
     if instant.is_none() { return; }
