@@ -58,6 +58,35 @@ impl Embed {
         self
     }
 
+    /// Sets just the name property for the author
+    /// If the author property doesnt exist, it creates one
+    pub fn set_author_name(&mut self, name: &str) {
+        // Check if the `author` field is already initialized
+        if let Some(author) = &mut self.author {
+            // Update the name
+            author.name = name.to_string();
+        } else {
+            // If `author` is None, create a new `EmbedAuthor` and set the name
+            let new_author = EmbedAuthor {
+                name: name.to_string(),
+                url: None,
+                icon_url: None,
+                proxy_icon_url: None,
+            };
+            self.author = Some(new_author);
+        }
+    }
+
+    pub fn set_author_icon(&mut self, icon_url: &str) {
+        // Check if the `author` field is already initialized
+        if let Some(author) = &mut self.author {
+            // Update the name
+            author.icon_url = Some(icon_url.to_string());
+        }
+
+        panic!("Author property does not exist!");
+    }
+
     pub fn set_title(&mut self, title: &str) -> &mut Self {
         self.title = Some(title.to_string());
         self

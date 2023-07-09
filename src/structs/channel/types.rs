@@ -1,21 +1,20 @@
 use reqwest::Client as ReqwestClient;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::Mutex;
 use std::sync::Arc;
 
-use crate::structs::member::Member;
-
-use crate::structs::user::User;
-use crate::structs::channel::enums::{
-    PermissionOverwriteType,
-    ChannelType
+use crate::structs::{
+    member::Member,
+    user::User,
+    channel::enums::ChannelType,
+    permissions::Permissions
 };
 
 //https://discord.com/developers/docs/resources/channel#channels-resource
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Channel {
     pub id: String,
-    #[serde(rename = "type")]
+    #[serde(rename = "type", deserialize_with = "deserialize_channel_type")]
     pub channel_type: ChannelType,
     pub guild_id: Option<String>,
     pub position: Option<u32>,
@@ -45,20 +44,53 @@ pub struct Channel {
     pub flags: Option<u64>,
     pub version: Option<u64>,
     pub available_tags: Option<Vec<ForumTag>>,
-
     #[serde(skip)]
-    pub client: Arc<Mutex<ReqwestClient>>,
+    pub _client: Option<Arc<Mutex<ReqwestClient>>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+fn deserialize_channel_type<'de, D>(deserializer: D) -> Result<ChannelType, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let channel_type_index: u16 = Deserialize::deserialize(deserializer)?;
+    match channel_type_index {
+        0 => Ok(ChannelType::GuildText),
+        1 => Ok(ChannelType::DM),
+        2 => Ok(ChannelType::GuildVoice),
+        3 => Ok(ChannelType::GroupDM),
+        4 => Ok(ChannelType::GuildCategory),
+        5 => Ok(ChannelType::GuildAnnouncement),
+        10 => Ok(ChannelType::AnnouncementThread),
+        11 => Ok(ChannelType::PublicThread),
+        12 => Ok(ChannelType::PrivateThread),
+        13 => Ok(ChannelType::GuildStageVoice),
+        14 => Ok(ChannelType::GuildDirectory),
+        15 => Ok(ChannelType::GuildForum),
+        _ => Err(serde::de::Error::custom("Invalid message type index"))
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ChannelMention {
+    pub id: String,
+    pub guild_id: String,
+    #[serde(rename = "type")]
+    pub mention_type: u64,
+    pub name: String
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PermissionOverwrite {
     pub id: String,
-    pub permission_type: PermissionOverwriteType,
-    pub allow: String,
-    pub deny: String,
+    #[serde(rename = "type")]
+    pub permission_type: String,
+    pub allow: u32,
+    pub deny: u32,
+    pub allow_new: String,
+    pub deny_new: String
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ThreadMetadata {
     pub archived: bool,
     pub auto_archive_duration: u32,
@@ -70,7 +102,7 @@ pub struct ThreadMetadata {
     pub create_timestamp: Option<String>
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ThreadMember {
     pub id: Option<String>,
     pub user_id: Option<String>,
@@ -80,7 +112,7 @@ pub struct ThreadMember {
     pub member: Option<Member>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ForumTag {
     pub id: String,
     pub name: String,

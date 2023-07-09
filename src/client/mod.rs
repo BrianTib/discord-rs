@@ -1,6 +1,6 @@
-use futures_util::TryStreamExt;
 #[allow(dead_code, unused_imports)]
-use futures_util::{stream::{StreamExt, SplitSink}, sink::SinkExt};
+use futures_util::TryStreamExt;
+use futures_util::{stream::{StreamExt}, sink::SinkExt};
 use reqwest::Client as ReqwestClient;
 use serde_json::{Value, json};
 use std::sync::Arc;
@@ -8,10 +8,15 @@ use std::time::{Duration, Instant};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use tokio::sync::{mpsc::{self, Sender}, Mutex};
 
+use crate::structs::guild::Guild;
+
 pub mod cache;
 pub mod types;
+
 pub use cache::types::ClientCache;
 pub use types::*;
+
+const API_VERSION: u8 = 10;
 
 impl Client {
     /// Creates a new Discord Bot Client
@@ -46,12 +51,18 @@ impl Client {
             .fold(0, |acc, intent| {
                 acc | (1 << *intent as usize)
             });
+
+        // Make some globally available variables
+        std::env::set_var("_CLIENT_TOKEN", token);
+        std::env::set_var("_DISCORD_API_URL", format!("https://discord.com/api/v={API_VERSION}"));
         
+        let rest = Arc::new(Mutex::new(ReqwestClient::new()));
+
         Self {
             intents: bits,
             token: token.to_string(),
-            cache: Arc::new(Mutex::new(ClientCache::new())),
-            client: ReqwestClient::new(),
+            cache: Arc::new(Mutex::new(ClientCache::new(Arc::clone(&rest)))),
+            rest: Arc::clone(&rest),
             events: None,
         }
     }
@@ -68,7 +79,7 @@ impl Client {
         // Send the identify payload
         let identify = _get_identify(&self.token, &self.intents);
         let _ = sender.send(identify).await;
-
+        let token = self.token.clone();
         let socket_mutex = Arc::new(Mutex::new(WebsocketConnection { sender, receiver }));
         self.events = Some(erx);
 
@@ -76,7 +87,8 @@ impl Client {
             _event_listener(
                 socket_mutex,
                 Arc::clone(&self.cache),
-                Arc::new(Mutex::new(etx))
+                Arc::new(Mutex::new(etx)),
+                token
             )
         );
 
@@ -88,6 +100,7 @@ async fn _event_listener(
     socket: Arc<Mutex<WebsocketConnection>>,
     cache: Arc<Mutex<ClientCache>>,
     event_channel: Arc<Mutex<Sender<(GatewayDispatchEventType, Value)>>>,
+    token: String
 ) {
     let event_channel = event_channel.lock().await;
     
@@ -96,8 +109,8 @@ async fn _event_listener(
     let mut interval: u64 = 0;
     let mut last_sequence: u64 = 0;
 
-    // Create a timer that checks if we should reply to a heartbeat every 500 milliseconds
-    let mut heartbeat_timer = tokio::time::interval(Duration::from_millis(500));
+    // Create a timer that checks if we should reply to a heartbeat every second
+    let mut heartbeat_timer = tokio::time::interval(Duration::from_millis(1000));
 
     loop {
         tokio::select! {
@@ -126,19 +139,18 @@ async fn _event_listener(
                                     .and_then(|dispatch_type| Some(GatewayDispatchEventTypeIndexer[dispatch_type]))
                                     .expect("Failed to deserialize event type for dispatch event");
 
-                                if dispatch_type == GatewayDispatchEventType::Ready {
-                                    let cache_data: ClientCache = serde_json::from_value(dispatch_data.clone()).unwrap();
-                                    *cache.lock().await = cache_data;
-                                }
-
+                                //_patch_cache(&cache, &dispatch_type, &dispatch_data).await;
                                 let _ = event_channel.send((dispatch_type, dispatch_data)).await;
                             },
                             GatewayEventType::Heartbeat => todo!(),
                             GatewayEventType::Identify => todo!(),
                             GatewayEventType::PresenceUpdate => todo!(),
                             GatewayEventType::VoiceStateUpdate => todo!(),
-                            GatewayEventType::Resume => todo!(),
-                            GatewayEventType::Reconnect => todo!(),
+                            GatewayEventType::Resume => {
+                                println!("Got resume event: {:#?}", event);
+                            },
+                            // Connection was likely dropped on discord's end. Mend it
+                            GatewayEventType::Reconnect => _reconnect_socket(&mut socket, &cache, &token, &last_sequence).await,
                             GatewayEventType::RequestGuildMembers => todo!(),
                             GatewayEventType::InvalidSession => todo!(),
                             GatewayEventType::Hello => {
@@ -154,9 +166,9 @@ async fn _event_listener(
                             },
                         };
                     },
+                    // Disconnecting this way from the socket is permanent
                     Message::Close(_) => {
-                        // Handle a close message and exit the loop
-                        println!("Received close message. Exiting...");
+                        println!("Disconnected from the socket");
                         break;
                     },
                     _ => {
@@ -171,6 +183,28 @@ async fn _event_listener(
                 _check_heartbeat(&mut next_heartbeat, &mut socket, last_sequence).await;
             }
         }
+    }
+}
+
+/// Updates Cache managers when certain events are received
+async fn _patch_cache(
+    cache: &Arc<Mutex<ClientCache>>,
+    dispatch_type: &GatewayDispatchEventType,
+    data: &Value
+) {
+    match dispatch_type {
+        GatewayDispatchEventType::Ready => {
+            let cache_data: ClientCache = serde_json::from_value(data.clone()).unwrap();
+            *cache.lock().await = cache_data;
+        },
+        GatewayDispatchEventType::GuildCreate => {
+            let mut cache = cache.lock().await;
+            println!("Guild Data String: {:#?}", data);
+            //let guild: Guild = serde_json::from_value(data.clone()).expect("Error serializing guild");
+            //println!("Guild Data: {:#?}", guild);
+            //cache.guilds.cache.set(guild.id.to_owned(), guild);
+        }
+        _ => {}
     }
 }
 
@@ -191,6 +225,29 @@ async fn _check_heartbeat(
     }
 
     *instant = None;
+}
+
+// Mend the connection to the socket using the given resume_gateway_url
+async fn _reconnect_socket(
+    socket: &mut WebsocketConnection,
+    cache: &Arc<Mutex<ClientCache>>,
+    token: &String,
+    sequence: &u64
+) {
+    println!("Disconnected from socket... reconnecting");
+
+    let client_cache = cache.lock().await;
+    let url = client_cache.resume_gateway_url.to_owned().unwrap();
+
+    let (new_socket, _) = connect_async(url)
+        .await
+        .expect("Failed to connect to reconnect to socket");
+
+    let (sender, receiver) = new_socket.split();
+    
+    let resume = _get_resume(token, &client_cache.session_id.to_owned().unwrap(), sequence);
+    *socket = WebsocketConnection { sender, receiver};
+    let _ = socket.sender.send(resume).await;
 }
 
 fn _get_heartbeat(sequence: u64) -> Message {
@@ -224,5 +281,21 @@ fn _get_identify(token: &String, intents: &u64) -> Message {
 
     // Serialize the identify request into JSON
     let identify = serde_json::to_string(&identify).unwrap();
-    return Message::text(identify);
+    Message::text(identify)
+}
+
+fn _get_resume(token: &String, session_id: &String, sequence: &u64) -> Message {
+    let resume = GatewayEvent {
+        op: GatewayEventType::Resume as usize,
+        s: None,
+        t: None,
+        d: Some(json!({
+            "token": token,
+            "session_id": session_id,
+            "seq": sequence
+        }))
+    };
+
+    let resume = serde_json::to_string(&resume).unwrap();
+    Message::Text(resume)
 }

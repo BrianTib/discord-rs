@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Role {
     pub id: String,
     pub name: String,
@@ -15,7 +15,7 @@ pub struct Role {
     pub tags: Option<RoleTag>
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RoleTag {
     pub bot_id: Option<String>,
     pub integration_id: Option<String>,

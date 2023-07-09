@@ -37,7 +37,7 @@ fn main() {
 # Examples
 
 ## Webhooks
-Before you can setup webhooks using discord-rs, you will need to create a webhook integration. Go to the settings for the channel you want to make a webhook for and in the integrations tab select "Create Webhook". From ther you can copy the webhook token and use it in your code.
+Before you can setup webhooks using discord-rs, you will need to create a webhook integration. Go to the settings for the channel you want to make a webhook for and in the integrations tab select "Create Webhook". From there you can copy the webhook token and use it in your code.
 
 ```rust
 use discord_rs::embed::Embed;
@@ -49,8 +49,10 @@ async fn main() {
   let id =  "YOUR_ID";
   let token =  "YOUR_TOKEN";
 
+  // Create the webhook client
   let webhook =  WebhookClient::new(id, token);
 
+  
   let embed =  Embed::new()
     .set_author(
       "Captain Hook",

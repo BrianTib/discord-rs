@@ -1,0 +1,84 @@
+Date : 2023-07-08 08:53:41
+Directory : c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src
+Total : 38 files,  1830 codes, 318 comments, 242 blanks, all 2390 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Rust     |         38 |      1,830 |        318 |        242 |      2,390 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++-------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                | files      | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                   |         38 |      1,830 |        318 |        242 |      2,390 |
+| . (Files)                                                                           |          1 |         20 |         17 |          1 |         38 |
+| client                                                                              |          4 |        491 |         45 |         52 |        588 |
+| client (Files)                                                                      |          2 |        439 |         45 |         46 |        530 |
+| client\cache                                                                        |          2 |         52 |          0 |          6 |         58 |
+| managers                                                                            |          2 |         66 |          1 |         17 |         84 |
+| managers\cache                                                                      |          1 |         32 |          0 |          9 |         41 |
+| managers\guild                                                                      |          1 |         34 |          1 |          8 |         43 |
+| structs                                                                             |         30 |      1,238 |        255 |        170 |      1,663 |
+| structs\application                                                                 |          2 |         52 |          1 |          7 |         60 |
+| structs\attachment                                                                  |          2 |         18 |          0 |          1 |         19 |
+| structs\channel                                                                     |          3 |        182 |          6 |         23 |        211 |
+| structs\embed                                                                       |          2 |        296 |        155 |         47 |        498 |
+| structs\emoji                                                                       |          2 |         16 |          0 |          2 |         18 |
+| structs\guild                                                                       |          2 |         80 |         13 |          9 |        102 |
+| structs\member                                                                      |          3 |         27 |          3 |          3 |         33 |
+| structs\message                                                                     |          3 |        242 |         10 |         24 |        276 |
+| structs\permissions                                                                 |          2 |         51 |          1 |          1 |         53 |
+| structs\reaction                                                                    |          2 |         10 |          0 |          2 |         12 |
+| structs\role                                                                        |          2 |         26 |          0 |          2 |         28 |
+| structs\user                                                                        |          2 |         16 |          0 |          1 |         17 |
+| structs\webhook                                                                     |          3 |        222 |         66 |         48 |        336 |
+| util                                                                                |          1 |         15 |          0 |          2 |         17 |
++-------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                            | language | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\client\cache\mod.rs          | Rust     |         21 |          0 |          1 |         22 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\client\cache\types.rs        | Rust     |         31 |          0 |          5 |         36 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\client\mod.rs                | Rust     |        200 |         42 |         36 |        278 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\client\types.rs              | Rust     |        239 |          3 |         10 |        252 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\lib.rs                       | Rust     |         20 |         17 |          1 |         38 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\managers\cache\mod.rs        | Rust     |         32 |          0 |          9 |         41 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\managers\guild\mod.rs        | Rust     |         34 |          1 |          8 |         43 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\application\mod.rs   | Rust     |          2 |          0 |          0 |          2 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\application\types.rs | Rust     |         50 |          1 |          7 |         58 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\attachment\mod.rs    | Rust     |          2 |          0 |          0 |          2 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\attachment\types.rs  | Rust     |         16 |          0 |          1 |         17 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\channel\enums.rs     | Rust     |         16 |          0 |          1 |         17 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\channel\mod.rs       | Rust     |         57 |          1 |         14 |         72 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\channel\types.rs     | Rust     |        109 |          5 |          8 |        122 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\embed\mod.rs         | Rust     |        224 |        155 |         38 |        417 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\embed\types.rs       | Rust     |         72 |          0 |          9 |         81 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\emoji\mod.rs         | Rust     |          2 |          0 |          0 |          2 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\emoji\types.rs       | Rust     |         14 |          0 |          2 |         16 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\guild\mod.rs         | Rust     |          7 |         13 |          5 |         25 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\guild\types.rs       | Rust     |         73 |          0 |          4 |         77 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\member\enums.rs      | Rust     |          6 |          0 |          0 |          6 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\member\mod.rs        | Rust     |          4 |          0 |          1 |          5 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\member\types.rs      | Rust     |         17 |          3 |          2 |         22 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\message\enums.rs     | Rust     |         53 |          0 |          4 |         57 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\message\mod.rs       | Rust     |         81 |          7 |         14 |        102 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\message\types.rs     | Rust     |        108 |          3 |          6 |        117 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\permissions\enums.rs | Rust     |         49 |          1 |          1 |         51 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\permissions\mod.rs   | Rust     |          2 |          0 |          0 |          2 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\reaction\mod.rs      | Rust     |          2 |          0 |          0 |          2 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\reaction\types.rs    | Rust     |          8 |          0 |          2 |         10 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\role\mod.rs          | Rust     |          2 |          0 |          0 |          2 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\role\types.rs        | Rust     |         24 |          0 |          2 |         26 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\user\mod.rs          | Rust     |          2 |          0 |          0 |          2 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\user\types.rs        | Rust     |         14 |          0 |          1 |         15 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\webhook\errors.rs    | Rust     |         34 |          2 |          7 |         43 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\webhook\mod.rs       | Rust     |        172 |         64 |         39 |        275 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\structs\webhook\types.rs     | Rust     |         16 |          0 |          2 |         18 |
+| c:\Users\crazy\Desktop\Programming\Rust\discord-rs\src\util\mod.rs                  | Rust     |         15 |          0 |          2 |         17 |
+| Total                                                                               |          |      1,830 |        318 |        242 |      2,390 |
++-------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+

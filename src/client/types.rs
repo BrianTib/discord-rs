@@ -18,7 +18,7 @@ use crate::client::ClientCache;
 pub struct Client {
     pub intents: u64,
     pub token: String,
-    pub client: ReqwestClient,
+    pub rest: Arc<Mutex<ReqwestClient>>,
     pub cache: Arc<Mutex<ClientCache>>,
     pub events: Option<Receiver<(GatewayDispatchEventType, Value)>>,
 }

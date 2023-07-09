@@ -1,4 +1,3 @@
-use std::convert::TryInto;
 use serde_json::Value;
 
 use crate::structs::channel::Channel;
@@ -10,11 +9,47 @@ pub mod types;
 pub use types::*;
 
 impl Message {
+    pub async fn from(json: Value) -> Result<Self, &'static str> {
+        let mut message: Self = serde_json::from_value(json).expect("Failed to parse message from JSON");
+        message.channel = Some(Channel::new(&message.channel_id).await);
+
+        Ok(message)
+    }
+
     /// Sends a text message to the channel
     pub async fn reply_content(&self, content: &str) -> Result<(), &'static str> {
         let mut payload = MessagePayload::new();
         payload.content = Some(content.to_string());
         Self::_reply(payload).await
+    }
+
+    /// Whether or not the message can be deleted
+    pub fn is_deletable(&self) -> bool {
+        match self.message_type {
+            MessageType::Default
+            | MessageType::ChannelPinnedMessage
+            | MessageType::UserJoin
+            | MessageType::GuildBoost
+            | MessageType::GuildBoostTier1
+            | MessageType::GuildBoostTier2
+            | MessageType::GuildBoostTier3
+            | MessageType::ChannelFollowAdd
+            | MessageType::GuildDiscoveryGracePeriodInitialWarning
+            | MessageType::GuildDiscoveryGracePeriodFinalWarning
+            | MessageType::Reply
+            | MessageType::ChatInputCommand
+            | MessageType::GuildInviteReminder
+            | MessageType::ContextMenuCommand
+            | MessageType::AutoModerationAction
+            | MessageType::RoleSubscriptionPurchase
+            | MessageType::InteractionPremiumUpsell
+            | MessageType::StageStart
+            | MessageType::StageEnd
+            | MessageType::StageSpeaker
+            | MessageType::StageTopic
+            | MessageType::GuildApplicationPremiumSubscription => true,
+            _ => false,
+        }
     }
 
     // Sends payloads which may include text, embeds, tts and more to the channel
@@ -28,22 +63,6 @@ impl Message {
 
     pub async fn _reply(payload: MessagePayload) -> Result<(), &'static str> {
         Ok(())
-    }
-}
-
-impl TryInto<Message> for Value {
-    type Error = &'static str;
-
-    fn try_into(self) -> Result<Message, Self::Error> {
-        //let binding = self.clone();
-        //let mut value = binding.as_object_mut().unwrap();
-        let mut message: Message = serde_json::from_value(self).unwrap();
-        //message.client = Channel::new(self.channel_id).await;
-        // value.get_mut("attachments").ok_or("");
-
-        println!("Message Value: {:#?}", message);
-        
-        Ok(message)
     }
 }
 
