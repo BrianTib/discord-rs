@@ -18,12 +18,14 @@
 
 pub mod client;
 pub mod managers;
+pub mod builders;
 pub mod structs {
     pub mod application;
+    pub mod application_command;
     pub mod attachment;
     pub mod channel;
-    pub mod embed;
     pub mod emoji;
+    pub mod embed;
     pub mod guild;
     pub mod member;
     pub mod message;
@@ -33,4 +35,11 @@ pub mod structs {
     pub mod user;
     pub mod webhook;
     pub mod sticker;
+    pub mod locale;
+    pub mod presence;
+    pub mod snowflake;
+}
+
+pub mod util {
+    pub mod rest;
 }

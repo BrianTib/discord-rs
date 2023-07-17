@@ -1,9 +1,7 @@
-use reqwest::RequestBuilder;
-#[allow(unconditional_recursion)]
-use reqwest::{Response, Client as ReqwestClient};
-use tokio::sync::Mutex;
+use reqwest::Client as ReqwestClient;
+use serde_json::{Map, Value};
 use std::sync::Arc;
-use serde::{Deserialize, Deserializer};
+use tokio::sync::Mutex;
 
 pub mod types;
 pub use types::*;
@@ -11,33 +9,41 @@ pub use types::*;
 pub mod enums;
 pub use enums::*;
 
-use crate::structs::message::MessagePayload;
-use crate::structs::permissions::Permissions;
+use crate::util::rest::post;
+
+use crate::structs::{
+    message::MessagePayload,
+    permissions::Permissions
+};
 
 impl Channel {
     pub async fn new(channel_id: &String) -> Self {
         let client = ReqwestClient::new();
         let mut channel = _fetch(&client, &channel_id).await;
-        channel._client = Some(Arc::new(Mutex::new(client)));
+        channel.rest = Some(Arc::new(Mutex::new(client)));
         channel
     }
 
     pub async fn send(&self, payload: MessagePayload) -> Result<(), &'static str> {
-        let client = self._client.as_ref().unwrap().lock().await;
         let body = serde_json::to_string(&payload).unwrap();
+        
+        let path = &format!("channels/{}/messages", &self.id);
+        let res = post(path, &body).await
+            .expect("Could not send message to channel");
 
-        client
-            .post(&body)
-            .send()
-            .await
-            .expect(&format!("Failed to send payload: {} to channel: {}", body, self.id));
+        // if &res.status() != 200 {
+        //     Err("Error while sending message to channel. API responded with status other than 200")
+        // }
 
+        let res_json = res.json::<Map<String, Value>>().await.unwrap();
+
+        println!("Sent message => {}. Response: {:?}. ", body, res_json);
         Ok(())
     }
 
     /// Private function for fetching and updating onto itself current data about the channel
     async fn _fetch_and_update(&mut self) -> Result<(), &'static str> {
-        let client = self._client.as_ref().unwrap().lock().await;
+        let client = self.rest.as_ref().unwrap().lock().await;
         let data = _fetch(&client, &self.id).await;
         println!("Data for channel {:#?}", data);
 
@@ -57,6 +63,7 @@ impl PermissionOverwrite {
 async fn _fetch(client: &ReqwestClient, channel_id: &String) -> Channel {
     let base_url = std::env::var("_DISCORD_API_URL").unwrap();
     let token = std::env::var("_CLIENT_TOKEN").unwrap();
+
     let response = client.get(format!("{base_url}/channels/{}", channel_id))
         .header("Authorization", format!("Bot {token}"))
         .send()

@@ -2,7 +2,10 @@ use reqwest::Client as ReqwestClient;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::managers::GuildManager;
+use crate::managers::{
+    GuildManager,
+    ChannelManager
+};
 
 pub mod types;
 pub use types::ClientCache;
@@ -13,7 +16,8 @@ impl ClientCache {
             application: None,
             geo_ordered_rtc_regions: None,
             guild_join_requests: None,
-            guilds: GuildManager::new(client),
+            guilds: GuildManager::new(Arc::clone(&client)),
+            channels: ChannelManager::new(Arc::clone(&client)),
             presences: None,
             private_channels: None,
             relationships: None,

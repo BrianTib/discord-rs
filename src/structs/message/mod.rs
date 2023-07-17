@@ -1,6 +1,8 @@
 use serde_json::Value;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
-use crate::structs::channel::Channel;
+use crate::client::ClientCache;
 
 pub mod enums;
 pub use enums::*;
@@ -9,9 +11,14 @@ pub mod types;
 pub use types::*;
 
 impl Message {
-    pub async fn from(json: Value) -> Result<Self, &'static str> {
+    pub async fn from(json: Value, cache: Arc<Mutex<ClientCache>>) -> Result<Self, &'static str> {
         let mut message: Self = serde_json::from_value(json).expect("Failed to parse message from JSON");
-        message.channel = Some(Channel::new(&message.channel_id).await);
+        
+        if let Some(channel_id) = &message.channel_id {
+            let mut cache = cache.lock().await;
+            let channel = cache.channels.fetch_by_id(channel_id).await.unwrap();
+            message.channel = Some(channel);
+        }
 
         Ok(message)
     }
@@ -20,7 +27,7 @@ impl Message {
     pub async fn reply_content(&self, content: &str) -> Result<(), &'static str> {
         let mut payload = MessagePayload::new();
         payload.content = Some(content.to_string());
-        Self::_reply(payload).await
+        Self::reply(self, payload).await
     }
 
     /// Whether or not the message can be deleted
@@ -53,15 +60,14 @@ impl Message {
     }
 
     // Sends payloads which may include text, embeds, tts and more to the channel
-    pub async fn reply(&mut self, payload: MessagePayload) -> Result<(), &'static str> {
-        // if self.channel.is_none() {
-        //     self.channel = Channel::new(self.channel_id);
-        // }
-        // Self::_reply(payload).await
-        Ok(())
-    }
+    pub async fn reply(&self, payload: MessagePayload) -> Result<(), &'static str> {
+        if self.channel.is_none() {
+            return Err("No channel available to reply");
+        }
 
-    pub async fn _reply(payload: MessagePayload) -> Result<(), &'static str> {
+        let channel = self.channel.as_ref().unwrap();
+        let _ = channel.send(payload).await;
+
         Ok(())
     }
 }

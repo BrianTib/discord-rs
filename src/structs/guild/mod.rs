@@ -1,11 +1,16 @@
 pub mod types;
 pub use types::*;
 
+pub mod enums;
+pub use enums::*;
+
+pub mod deserializers;
+pub use deserializers::*;
+
 impl Guild {
-    pub fn get_channel(&self, channel_id: &str) {
-        self.channels.iter().find(|&channel| channel.id == channel_id);
-        
-    }
+    // pub fn get_channel(&self, channel_id: &str) {
+    //     //self.channels.iter().find(|&channel| channel.id == channel_id);
+    // }
 }
 
 // Anonymous function for fetching updated data about the channel

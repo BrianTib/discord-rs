@@ -1,8 +1,8 @@
 use reqwest::Client as ReqwestClient;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use serde_json::Value;
-use serde::{Serialize, Deserialize, Deserializer};
+
+use serde::{Deserialize, Deserializer};
 
 use crate::managers::cache::CacheManager;
 use crate::structs::guild::Guild;
@@ -14,15 +14,16 @@ pub struct GuildManager {
 }
 
 impl<'de> Deserialize<'de> for GuildManager {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    fn deserialize<D>(_deserializer: D) -> Result<GuildManager, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let mut guild: Self = serde::Deserialize::deserialize(deserializer)?;
-        println!("GUILD {:?}", guild);
-        // Perform custom logic here to set the `skipped` field based on the deserialized data
-        //my_struct.skipped = Some(Value::Null);
+        // Create and return the GuildManager instance
+        let guild_manager = GuildManager {
+            cache: CacheManager::<Guild>::new(),
+            rest: Arc::new(Mutex::new(ReqwestClient::new())),
+        };
 
-        Ok(guild)
+        Ok(guild_manager)
     }
 }

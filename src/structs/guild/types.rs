@@ -1,199 +1,170 @@
-use serde::{Serialize, Deserialize, Deserializer};
+use serde::{Serialize, Deserialize};
 
 use crate::structs::{
     member::Member,
     channel::Channel,
     role::Role,
-    emoji::Emoji
+    emoji::Emoji,
+    sticker::Sticker,
+    presence::Presence,
+    user::User,
+    locale::{Locale, locale_deserializer}
+};
+
+use super::{
+    ExplicitContentFilterLevel,
+    GuildFeature,
+    MessageNotificationLevel,
+    MFALevel,
+    NSFWLevel,
+    PremiumTierLevel,
+    SystemChannelFlags,
+    VerificationLevel,
+    GuildScheduledEventPrivacyLevel,
+    GuildScheduledEventStatus,
+    GuildScheduledEventType,
+    explicit_content_filter_level_deserializer,
+    message_notification_level_deserializer,
+    mfa_level_deserializer,
+    nsfw_level_deserializer,
+    premium_tier_level_deserializer,
+    system_channel_flags_deserializer,
+    verification_level_deserializer,
+    guild_scheduled_event_privacy_level_deserializer,
+    guild_scheduled_event_status_deserializer,
+    guild_scheduled_event_type_deserializer,
+    guild_features_deserializer
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Guild {
+    pub id: String,
+    pub name: String,
+    pub icon: Option<String>,
+    pub icon_hash: Option<String>,
+    pub splash: Option<String>,
+    pub discovery_splash: Option<String>,
+    pub owner: Option<bool>,
+    pub owner_id: Option<String>,
+    pub permissions: Option<String>,
+    // Deprecated
+    pub region: Option<String>,
     pub afk_channel_id: Option<String>,
     pub afk_timeout: u32,
-    pub application_command_counts: serde_json::Value,
-    pub application_id: Option<String>,
-    pub banner: Option<String>,
-    pub channels: Vec<Channel>,
-    pub default_message_notifications: DefaultLevelNotificationLevel,
-    pub description: Option<String>,
-    pub discovery_splash: Option<String>,
-    pub embedded_activities: Vec<serde_json::Value>,
-    pub emojis: Vec<Emoji>,
+    pub widget_enabled: Option<bool>,
+    #[serde(deserialize_with = "verification_level_deserializer")]
+    pub verification_level: VerificationLevel,
+    #[serde(deserialize_with = "message_notification_level_deserializer")]
+    pub default_message_notifications: MessageNotificationLevel,
+    #[serde(deserialize_with = "explicit_content_filter_level_deserializer")]
     pub explicit_content_filter: ExplicitContentFilterLevel,
-    #[serde(deserialize_with = "features_deserializer")]
-    pub features: Vec<GuildFeature>,
-    pub guild_hashes: GuildHashes,
-    pub guild_scheduled_events: Vec<serde_json::Value>,
-    pub home_header: Option<serde_json::Value>,
-    pub hub_type: Option<serde_json::Value>,
-    pub icon: String,
-    pub id: String,
-    pub incidents_data: Option<serde_json::Value>,
-    pub joined_at: String,
-    pub large: bool,
-    pub latest_onboarding_question_id: Option<serde_json::Value>,
-    pub lazy: bool,
-    pub max_members: u32,
-    pub max_stage_video_channel_users: u32,
-    pub max_video_channel_users: u32,
-    pub member_count: u32,
-    pub members: Vec<Member>,
-    pub mfa_level: MFALevel,
-    pub name: String,
-    pub nsfw_level: NSFWLevel,
-    pub nsfw: bool,
-    pub owner_id: String,
-    pub preferred_locale: String,
-    pub premium_progress_bar_enabled: bool,
-    pub premium_subscription_count: u32,
-    pub premium_tier: u32,
-    pub presences: Vec<serde_json::Value>,
-    pub public_updates_channel_id: Option<String>,
-    pub region: String,
     pub roles: Vec<Role>,
+    pub emojis: Vec<Emoji>,
+    #[serde(deserialize_with = "guild_features_deserializer")]
+    pub features: Vec<GuildFeature>,
+    #[serde(deserialize_with = "mfa_level_deserializer")]
+    pub mfa_level: MFALevel,
+    pub application_id: Option<String>,
+    pub system_channel_id: Option<String>,
+    #[serde(deserialize_with = "system_channel_flags_deserializer")]
+    pub system_channel_flags: Vec<SystemChannelFlags>,
     pub rules_channel_id: Option<String>,
-    pub safety_alerts_channel_id: Option<String>,
-    pub splash: Option<String>,
-    pub stage_instances: Vec<serde_json::Value>,
-    pub stickers: Vec<serde_json::Value>,
-    pub system_channel_flags: SystemChannelFlags,
-    pub system_channel_id: String,
-    pub threads: Vec<serde_json::Value>,
-    pub unavailable: bool,
-    pub vanity_url_code: Option<serde_json::Value>,
-    pub verification_level: u32,
-    pub voice_states: Vec<serde_json::Value>,
+    pub max_presences: Option<u32>,
+    pub max_members: Option<u32>,
+    pub vanity_url_code: Option<String>,
+    pub description: Option<String>,
+    pub banner: Option<String>,
+    #[serde(deserialize_with = "premium_tier_level_deserializer")]
+    pub premium_tier: PremiumTierLevel,
+    pub premium_subscription_count: u32,
+    #[serde(deserialize_with = "locale_deserializer")]
+    pub preferred_locale: Locale,
+    pub public_updates_channel_id: Option<String>,
+    pub max_video_channel_users: Option<u32>,
+    pub max_stage_video_channel_users: Option<u32>,
+    pub approximate_member_count: Option<u32>,
+    pub approximate_presence_count: Option<u32>,
+    pub welcome_screen: Option<WelcomeScreen>,
+    #[serde(deserialize_with = "nsfw_level_deserializer")]
+    pub nsfw_level: NSFWLevel,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stickers: Option<Vec<Sticker>>,
+    pub premium_progress_bar_enabled: bool,
+    pub safety_alers_channel_id: Option<String>,
+    // From here forth, properties from GuildCreate gateway events
+    pub joined_at: Option<String>,
+    pub large: Option<bool>,
+    pub unavailable: Option<bool>,
+    pub member_count: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub voice_states: Option<Vec<VoiceState>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub members: Option<Vec<Member>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub channels: Option<Vec<Channel>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub threads: Option<Vec<Channel>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub presences: Option<Vec<Presence>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub guild_scheduled_events: Option<Vec<GuildScheduledEvent>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GuildHashes {
-    channels: Hash,
-    metadata: Hash,
-    roles: Hash,
-    version: u32,
+pub struct WelcomeScreen {
+    pub description: Option<String>,
+    pub welcome_channels: Vec<WelcomeScreenChannel>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Hash {
-    hash: String,
-    omitted: bool,
+pub struct WelcomeScreenChannel {
+    channel_id: String,
+    description: String,
+    emoji_id: Option<String>,
+    emoji_name: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum DefaultLevelNotificationLevel {
-    AllMessages,
-    OnlyMentions
+pub struct VoiceState {
+    pub guild_id: Option<String>,
+    pub channel_id: Option<String>,
+    pub user_id: String,
+    pub member: Option<Member>,
+    pub session_id: Option<String>,
+    pub deaf: bool,
+    pub mute: bool,
+    pub self_deaf: bool,
+    pub self_mute: bool,
+    pub self_stream: Option<bool>,
+    pub self_video: bool,
+    pub suppress: bool,
+    pub request_to_speak_timestamp: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum ExplicitContentFilterLevel {
-    Disabled,
-    MembersWithoutRoles,
-    AllMembers
+pub struct GuildScheduledEvent {
+    pub id: String,
+    pub guild_id: String,
+    pub channel_id: Option<String>,
+    pub creator_id: Option<String>,
+    pub name: String,
+    pub description: Option<String>,
+    pub scheduled_start_time: Option<String>,
+    pub scheduled_end_time: Option<String>,
+    #[serde(deserialize_with = "guild_scheduled_event_privacy_level_deserializer")]
+    pub privacy_level: GuildScheduledEventPrivacyLevel,
+    #[serde(deserialize_with = "guild_scheduled_event_status_deserializer")]
+    pub status: GuildScheduledEventStatus,
+    #[serde(deserialize_with = "guild_scheduled_event_type_deserializer")]
+    pub enitity_type: GuildScheduledEventType,
+    pub entity_id: Option<String>,
+    pub entity_metadata: Option<GuildScheduledEventEntityMetadata>,
+    pub creator: Option<User>,
+    pub user_count: u32,
+    pub image: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum GuildFeature {
-    AnimatedBanner,
-    AnimatedIcon,
-    ApplicationCommandPermissionsV2,
-    AutoModeration,
-    Banner,
-    Community,
-    CreatorMonetizableProvisional,
-    CreatorStorePage,
-    DeveloperSupportServer,
-    Discoverable,
-    Featurable,
-    InvitesDisabled,
-    InviteSplash,
-    MemberVerificationGateEnabled,
-    MoreStickers,
-    News,
-    Partnered,
-    PreviewEnabled,
-    RaidAlertsDisabled,
-    RoleIcons,
-    RoleSubscriptionsAvailableForPurchase,
-    RoleSubscriptionsEnabled,
-    TicketedEventsEnabled,
-    VanityUrl,
-    Verified,
-    VIPRegions,
-    WelcomeScreenEnabled
-}
-
-fn features_deserializer<'de, D>(deserializer: D) -> Result<Vec<GuildFeature>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let feature_strings: Vec<String> = Deserialize::deserialize(deserializer)?;
-    let features = feature_strings
-        .iter()
-        .map(|feature_string| {
-            match feature_string.as_str() {
-                "ANIMATED_BANNER" => GuildFeature::AnimatedBanner,
-                "ANIMATED_ICON" => GuildFeature::AnimatedIcon,
-                "APPLICATION_COMMAND_PERMISSIONS_V2" => GuildFeature::ApplicationCommandPermissionsV2,
-                "AUTO_MODERATION" => GuildFeature::AutoModeration,
-                "BANNER" => GuildFeature::Banner,
-                "COMMUNITY" => GuildFeature::Community,
-                "CREATOR_MONETIZABLE_PROVISIONAL" => GuildFeature::CreatorMonetizableProvisional,
-                "CREATOR_STORE_PAGE" => GuildFeature::CreatorStorePage,
-                "DEVELOPER_SUPPORT_SERVER" => GuildFeature::DeveloperSupportServer,
-                "DISCOVERABLE" => GuildFeature::Discoverable,
-                "FEATURABLE" => GuildFeature::Featurable,
-                "INVITES_DISABLED" => GuildFeature::InvitesDisabled,
-                "INVITE_SPLASH" => GuildFeature::InviteSplash,
-                "MEMBER_VERIFICATION_GATE_ENABLED" => GuildFeature::MemberVerificationGateEnabled,
-                "MORE_STICKERS" => GuildFeature::MoreStickers,
-                "NEWS" => GuildFeature::News,
-                "PARTNERED" => GuildFeature::Partnered,
-                "PREVIEW_ENABLED" => GuildFeature::PreviewEnabled,
-                "RAID_ALERTS_DISABLED" => GuildFeature::RaidAlertsDisabled,
-                "ROLE_ICONS" => GuildFeature::RoleIcons,
-                "ROLE_SUBSCRIPTIONS_AVAILABLE_FOR_PURCHASE" => {
-                    GuildFeature::RoleSubscriptionsAvailableForPurchase
-                }
-                "ROLE_SUBSCRIPTIONS_ENABLED" => GuildFeature::RoleSubscriptionsEnabled,
-                "TICKETED_EVENTS_ENABLED" => GuildFeature::TicketedEventsEnabled,
-                "VANITY_URL" => GuildFeature::VanityUrl,
-                "VERIFIED" => GuildFeature::Verified,
-                "VIP_REGIONS" => GuildFeature::VIPRegions,
-                "WELCOME_SCREEN_ENABLED" => GuildFeature::WelcomeScreenEnabled,
-                _ => {
-                    // Handle unrecognized feature string
-                    // You can choose to return an error or fallback to a default value
-                    unimplemented!("Unrecognized feature: {}", feature_string);
-                }
-            }
-        })
-        .collect();
-
-    Ok(features)
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum MFALevel {
-    None,
-    Elevated
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum NSFWLevel {
-    Default,
-    Explicit,
-    Safe,
-    AgeRestricted
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum SystemChannelFlags {
-    SupressJoinNotifications = 1 << 0,
-    SupressPremiumSubscriptions = 1 << 1,
-    SuppressGuildReminderNotifications = 1 << 2,
-    SuppressJoinNotificationReplies = 1 << 3,
-    SuppressRoleSubscriptionPurchaseNotification = 1 << 4,
-    SuppressRoleSubscriptionPurchaseNotificationReplies = 1 << 5
+pub struct GuildScheduledEventEntityMetadata {
+    pub location: Option<String>
 }

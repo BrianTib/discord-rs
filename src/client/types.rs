@@ -4,16 +4,23 @@ use futures_util::stream::{SplitSink, SplitStream};
 use reqwest::Client as ReqwestClient;
 use serde_json::Value;
 use serde::{Serialize, Deserialize};
-use std::sync::Arc;
-use std::ops::Index;
 use tokio_tungstenite::{WebSocketStream, MaybeTlsStream};
 use tungstenite::Message as TungsteniteMessage;
+use std::{
+    ops::Index,
+    collections::HashMap,
+    sync::Arc
+};
 use tokio::{
     sync::{mpsc::Receiver, Mutex},
     net::TcpStream
 };
 
 use crate::client::ClientCache;
+use super::{
+    GatewayEventType,
+    GatewayDispatchEventType
+};
 
 pub struct Client {
     pub intents: u64,
@@ -21,6 +28,7 @@ pub struct Client {
     pub rest: Arc<Mutex<ReqwestClient>>,
     pub cache: Arc<Mutex<ClientCache>>,
     pub events: Option<Receiver<(GatewayDispatchEventType, Value)>>,
+    pub event_callbacks: HashMap<GatewayDispatchEventType, Box<dyn Fn(&Client) + Send + Sync>>,
 }
 pub struct Connection {
     pub socket: WebsocketConnection, 
@@ -45,45 +53,6 @@ pub struct GatewayEvent {
     pub t: Option<String>
 }
 
-//https://discord.com/developers/docs/topics/gateway#gateway-intents
-#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
-pub enum GatewayIntentBits {
-    Guilds,
-    GuildMembers,
-    GuildModeration,
-    GuildEmojisAndStickers,
-    GuildIntegrations,
-    GuildWebhooks,
-    GuildInvites,
-    GuildVoiceStates,
-    GuildPresences,
-    GuildMessages,
-    GuildMessageReactions,
-    GuildMessageTyping,
-    DirectMessages,
-    DirectmessageReactions,
-    DirectmessageTyping,
-    MessageContent,
-    GuildScheduledEvents,
-    AutoModerationConfiguration,
-    AutoModerationExecution
-}
-
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
-pub enum GatewayEventType {
-    Dispatch,
-    Heartbeat,
-    Identify,
-    PresenceUpdate,
-    VoiceStateUpdate,
-    Resume,
-    Reconnect,
-    RequestGuildMembers,
-    InvalidSession,
-    Hello,
-    HeartbeatAcknowledge
-}
-
 pub struct GatewayEventTypeIndexer;
 impl Index<usize> for GatewayEventTypeIndexer {
     type Output = GatewayEventType;
@@ -106,74 +75,6 @@ impl Index<usize> for GatewayEventTypeIndexer {
             _ => panic!("Index out of bounds"),
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
-pub enum GatewayDispatchEventType {
-    Hello,
-    Ready,
-    Resumed,
-    Reconnect,
-    InvalidSession,
-    ApplicationCommandPermissionsUpdate,
-    AutoModerationRuleCreate,
-    AutoModerationRuleUpdate,
-    AutoModerationRuleDelete,
-    AutoModerationActionExecution,
-    ChannelCreate,
-    ChannelUpdate,
-    ChannelDelete,
-    ChannelPinsUpdate,
-    ThreadCreate,
-    ThreadUpdate,
-    ThreadDelete,
-    ThreadListSync,
-    ThreadMemberUpdate,
-    ThreadMembersUpdate,
-    GuildCreate,
-    GuildUpdate,
-    GuildDelete,
-    GuildAuditLogEntryCreate,
-    GuildBanAdd,
-    GuildBanRemove,
-    GuildEmojisUpdate,
-    GuildStickersUpdate,
-    GuildIntegrationsUpdate,
-    GuildMemberAdd,
-    GuildMemberRemove,
-    GuildMemberUpdate,
-    GuildMembersChunk,
-    GuildRoleCreate,
-    GuildRoleUpdate,
-    GuildRoleDelete,
-    GuildScheduledEventCreate,
-    GuildScheduledEventUpdate,
-    GuildScheduledEventDelete,
-    GuildScheduledEventUserAdd,
-    GuildScheduledEventUserRemove,
-    IntegrationCreate,
-    IntegrationUpdate,
-    IntegrationDelete,
-    InteractionCreate,
-    InviteCreate,
-    InviteDelete,
-    MessageCreate,
-    MessageUpdate,
-    MessageDelete,
-    MessageDeleteBulk,
-    MessageReactionAdd,
-    MessageReactionRemove,
-    MessageReactionRemoveAll,
-    MessageReactionRemoveEmoji,
-    PresenceUpdate,
-    StageInstanceCreate,
-    StageInstanceUpdate,
-    StageInstanceDelete,
-    TypingStart,
-    UserUpdate,
-    VoiceStateUpdate,
-    VoiceServerUpdate,
-    WebhooksUpdate
 }
 
 pub struct GatewayDispatchEventTypeIndexer;

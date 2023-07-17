@@ -10,6 +10,12 @@
 
 You can keep up to date with development on our [Discord Server](https://discord.gg/RT4q6Y7Xkh)
 
+## Features
+- Blazingly Fast!
+- Asynchronous
+- Up to date (Uses Discord's API v10 which at the time of this being written is the latest version)
+- Intuitive
+
 ## Getting Started
 
 It is recommended to use [dotenv](https://crates.io/crates/dotenv) alongside **discord-rs** for safe-keeping tokens. Although it is not necessary, here is a quick example of how to use **dotenv** in rust.
@@ -52,7 +58,6 @@ async fn main() {
   // Create the webhook client
   let webhook =  WebhookClient::new(id, token);
 
-  
   let embed =  Embed::new()
     .set_author(
       "Captain Hook",
@@ -79,3 +84,8 @@ async fn main() {
 ### License
 
 This project is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+
+### Coffee = Code
+I love coffee! If you want to support the project a cup of coffee goes a long way. ☕
+
+[Paypal](https://www.paypal.me/bptiburcio)

@@ -7,9 +7,7 @@ pub struct CacheManager<T> {
 
 impl<T> CacheManager<T> {
     pub fn new() -> Self {
-        Self {
-            _cache: HashMap::new(),
-        }
+        Self { _cache: HashMap::new() }
     }
 
     pub fn set(&mut self, key: String, value: T) {

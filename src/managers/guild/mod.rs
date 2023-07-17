@@ -17,6 +17,10 @@ impl GuildManager {
             cache: CacheManager::<Guild>::new(),
         }
     }
+
+    pub fn set(&mut self, guild: Guild) {
+        self.cache.set(guild.id.to_owned(), guild);
+    }
     
     pub fn get(&self, ids: &[&str]) -> Vec<Guild> {
         let mut collection = Vec::<Guild>::new();

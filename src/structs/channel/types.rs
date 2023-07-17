@@ -5,16 +5,20 @@ use std::sync::Arc;
 
 use crate::structs::{
     member::Member,
-    user::User,
-    channel::enums::ChannelType,
-    permissions::Permissions
+    user::User
+};
+
+use super::{
+    ChannelType,
+    PermissionType,
+    permission_type_deserializer
 };
 
 //https://discord.com/developers/docs/resources/channel#channels-resource
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Channel {
     pub id: String,
-    #[serde(rename = "type", deserialize_with = "deserialize_channel_type")]
+    #[serde(rename = "type", deserialize_with = "channel_type_deserializer")]
     pub channel_type: ChannelType,
     pub guild_id: Option<String>,
     pub position: Option<u32>,
@@ -45,10 +49,10 @@ pub struct Channel {
     pub version: Option<u64>,
     pub available_tags: Option<Vec<ForumTag>>,
     #[serde(skip)]
-    pub _client: Option<Arc<Mutex<ReqwestClient>>>,
+    pub rest: Option<Arc<Mutex<ReqwestClient>>>,
 }
 
-fn deserialize_channel_type<'de, D>(deserializer: D) -> Result<ChannelType, D::Error>
+fn channel_type_deserializer<'de, D>(deserializer: D) -> Result<ChannelType, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -82,12 +86,10 @@ pub struct ChannelMention {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PermissionOverwrite {
     pub id: String,
-    #[serde(rename = "type")]
-    pub permission_type: String,
-    pub allow: u32,
-    pub deny: u32,
-    pub allow_new: String,
-    pub deny_new: String
+    #[serde(rename = "type", deserialize_with = "permission_type_deserializer")]
+    pub permission_type: PermissionType,
+    pub allow: String,
+    pub deny: String
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

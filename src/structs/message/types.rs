@@ -1,28 +1,31 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
+use serde_with::skip_serializing_none;
 
 use crate::structs::{
     channel::{Channel, ChannelMention},
-    embed::Embed,
     member::Member,
     role::Role,
     reaction::Reaction,
     message::enums::{MessageType, MessageActivity, AllowedMentionsType},
-    attachment::Attachment
+    attachment::Attachment,
+    user::User
 };
+
+use crate::structs::embed::Embed;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Message {
     pub attachments: Vec<Attachment>,
-    pub author: Author,
-    pub channel_id: String,
+    pub author: User,
+    pub channel_id: Option<String>,
     #[serde(skip)]
     pub channel: Option<Channel>,
     pub components: Vec<Value>,
     pub content: String,
     pub edited_timestamp: Option<String>,
     pub embeds: Vec<Embed>,
-    pub flags: u64,
+    pub flags: Option<u64>,
     pub guild_id: Option<String>,
     pub id: String,
     pub member: Option<Member>,
@@ -43,16 +46,16 @@ pub struct Message {
     pub message_type: MessageType,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Author {
-    pub avatar_decoration: Option<String>,
-    pub avatar: String,
-    pub discriminator: String,
-    pub global_name: String,
-    pub id: String,
-    pub public_flags: u64,
-    pub username: String,
-}
+// #[derive(Serialize, Deserialize, Debug)]
+// pub struct Author {
+//     pub avatar_decoration: Option<String>,
+//     pub avatar: String,
+//     pub discriminator: String,
+//     pub global_name: String,
+//     pub id: String,
+//     pub public_flags: u64,
+//     pub username: String,
+// }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AllowedMentions {
@@ -64,6 +67,8 @@ pub struct AllowedMentions {
     pub replied_user: bool
 }
 
+// Dont serialize any of the optionals if they are of the None variant
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MessagePayload {
     pub content: Option<String>,

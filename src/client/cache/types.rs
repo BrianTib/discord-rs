@@ -2,7 +2,10 @@
 use serde::{Serialize, Deserialize};
 
 use crate::structs::user::User;
-use crate::managers::GuildManager;
+use crate::managers::{
+    GuildManager,
+    ChannelManager
+};
 
 #[derive(Deserialize, Debug)]
 pub struct ClientCache {
@@ -10,6 +13,7 @@ pub struct ClientCache {
     pub geo_ordered_rtc_regions: Option<Vec<String>>,
     pub guild_join_requests: Option<Vec<String>>,
     pub guilds: GuildManager,
+    pub channels: ChannelManager,
     pub presences: Option<Vec<String>>,
     pub private_channels: Option<Vec<String>>,
     pub relationships: Option<Vec<String>>,
@@ -23,7 +27,7 @@ pub struct ClientCache {
 
 #[derive(Deserialize, Debug)]
 pub struct Application {
-    pub flags: u64,
+    pub flags: Option<u64>,
     pub id: String,
 }
 

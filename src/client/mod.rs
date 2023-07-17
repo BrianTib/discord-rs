@@ -1,20 +1,36 @@
 #[allow(dead_code, unused_imports)]
-use futures_util::TryStreamExt;
-use futures_util::{stream::{StreamExt}, sink::SinkExt};
 use reqwest::Client as ReqwestClient;
 use serde_json::{Value, json};
-use std::sync::Arc;
-use std::time::{Duration, Instant};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use tokio::sync::{mpsc::{self, Sender}, Mutex};
 
-use crate::structs::guild::Guild;
+use futures_util::{
+    TryStreamExt,
+    stream::StreamExt,
+    sink::SinkExt
+};
+
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+    collections::HashMap
+};
+
+use crate::structs::{
+    guild::Guild,
+    application_command::ApplicationCommand
+};
+
+use crate::util::rest::post;
 
 pub mod cache;
-pub mod types;
-
 pub use cache::types::ClientCache;
+
+pub mod types;
 pub use types::*;
+
+pub mod enums;
+pub use enums::*;
 
 const API_VERSION: u8 = 10;
 
@@ -54,7 +70,7 @@ impl Client {
 
         // Make some globally available variables
         std::env::set_var("_CLIENT_TOKEN", token);
-        std::env::set_var("_DISCORD_API_URL", format!("https://discord.com/api/v={API_VERSION}"));
+        std::env::set_var("_DISCORD_API_URL", format!("https://discord.com/api/v{API_VERSION}"));
         
         let rest = Arc::new(Mutex::new(ReqwestClient::new()));
 
@@ -64,7 +80,19 @@ impl Client {
             cache: Arc::new(Mutex::new(ClientCache::new(Arc::clone(&rest)))),
             rest: Arc::clone(&rest),
             events: None,
+            event_callbacks: HashMap::new()
         }
+    }
+
+    pub fn on_event(
+        mut self,
+        event_type: GatewayDispatchEventType,
+        callback: impl Fn(&Client) + Send + Sync + 'static,
+    ) -> Self {
+        self.event_callbacks
+            .insert(event_type, Box::new(callback));
+
+        self
     }
 
     /// Connects the client to the Discord Gateway webhook
@@ -92,6 +120,28 @@ impl Client {
             )
         );
 
+        // while let Some(event_type) = erx.recv().await {
+        //     if let Some(callback) = self.event_callbacks.get(&event_type) {
+        //         callback(self);
+        //     }
+        // }
+
+        Ok(())
+    }
+
+    pub async fn register_guild_commands(&self, guilds: &str, commands: &[ApplicationCommand]) -> Result<(), &'static str> {
+        let cache = self.cache.lock().await;
+        //let application_id = &cache.application.unwrap().id;
+        
+        let commands = serde_json::to_string(commands).unwrap();
+
+        println!("{:#?}, {:#?}", commands, cache);
+        // guilds.iter().for_each(|guild_id| {
+        //     let res = post(
+        //         format!("/applications/{}/guilds/{}/commands", application_id, guild_id),
+        //     )
+        // });
+        
         Ok(())
     }
 }
@@ -138,8 +188,8 @@ async fn _event_listener(
                                     .and_then(|t| Some(t.as_str()))
                                     .and_then(|dispatch_type| Some(GatewayDispatchEventTypeIndexer[dispatch_type]))
                                     .expect("Failed to deserialize event type for dispatch event");
-
-                                //_patch_cache(&cache, &dispatch_type, &dispatch_data).await;
+                                
+                                _patch_cache(&cache, &dispatch_type, &dispatch_data).await;
                                 let _ = event_channel.send((dispatch_type, dispatch_data)).await;
                             },
                             GatewayEventType::Heartbeat => todo!(),
@@ -198,11 +248,11 @@ async fn _patch_cache(
             *cache.lock().await = cache_data;
         },
         GatewayDispatchEventType::GuildCreate => {
-            let mut cache = cache.lock().await;
-            println!("Guild Data String: {:#?}", data);
-            //let guild: Guild = serde_json::from_value(data.clone()).expect("Error serializing guild");
-            //println!("Guild Data: {:#?}", guild);
-            //cache.guilds.cache.set(guild.id.to_owned(), guild);
+            //let mut cache = cache.lock().await;
+            let guild: Guild = serde_json::from_value(data.clone()).expect("Error serializing guild");
+            //cache.guilds.set(guild.to_owned());
+
+            println!("Guild: {:#?}", guild);
         }
         _ => {}
     }
