@@ -2,6 +2,9 @@ use chrono::Local;
 use colored::*;
 use std::time::Duration;
 
+pub mod rest;
+pub use rest;
+
 pub fn log_message(kind: &str, message: &str) {
     let current_time = Local::now().format("%Y-%m-%d %H:%M:%S");
     let colored_message = match kind {

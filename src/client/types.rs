@@ -1,31 +1,28 @@
 #[allow(dead_code, unused_variables, unused_imports)]
-use futures_util::sink::SinkExt;
 use reqwest::Client as ReqwestClient;
 use serde_json::Value;
 use serde::{Serialize, Deserialize};
+use tokio::sync::mpsc::Receiver;
 use std::{
     ops::Index,
-    sync::{Arc, Mutex, mpsc::Receiver}
+    sync::{Mutex, Arc}
 };
 
 use crate::util::ws::WebsocketConnection;
 use crate::client::ClientCache;
+
 use super::{
     GatewayEventType,
     GatewayDispatchEventType
 };
 
+#[derive(Debug)]
 pub struct Client {
-    pub intents: u64,
-    pub token: String,
-    pub ws: WebsocketConnection,
     pub cache: Arc<Mutex<ClientCache>>,
     pub events: Option<Receiver<(GatewayDispatchEventType, Value)>>,
-    // pub event_callbacks: HashMap<GatewayDispatchEventType, Box<dyn Fn(&Client) + Send + Sync>>,
-}
-pub struct Connection {
-    pub socket: WebsocketConnection, 
-    pub http_client: ReqwestClient
+    pub intents: u64,
+    pub token: String,
+    pub ws: Option<WebsocketConnection>
 }
 
 pub struct SessionStartLimitObject {

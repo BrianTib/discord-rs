@@ -5,7 +5,7 @@ use crate::structs::channel::Channel;
 
 #[derive(Debug)]
 pub struct ChannelManager {
-    pub cache: CacheManager<Channel>
+    pub cache: CacheManager<Channel>,
 }
 
 impl<'de> Deserialize<'de> for ChannelManager {
@@ -14,7 +14,7 @@ impl<'de> Deserialize<'de> for ChannelManager {
         D: Deserializer<'de>,
     {   
         let channel_manager = ChannelManager {
-            cache: CacheManager::<Channel>::new()
+            cache: CacheManager::<Channel>::new(),
         };
 
         Ok(channel_manager)

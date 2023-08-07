@@ -1,4 +1,4 @@
-#[allow(dead_code)]
+#![allow(dead_code)]
 use crate::managers::CacheManager;
 use crate::structs::channel::Channel;
 use crate::util::rest::get;
@@ -53,13 +53,7 @@ impl ChannelManager {
 }
 
 async fn _fetch(id: &str) -> Channel {
-    let response = get(&format!("/channels/{id}"))
-        .await
-        .expect(&format!("Failed to fetch guild with id {}", id));
- 
-    let response = response.text()
-        .await
-        .expect("Failed to deserialize channel data");
-
+    let response = get(&format!("/channels/{id}")).await.unwrap();
+    let response = response.text().await.unwrap();
     serde_json::from_str(&response).unwrap()
 }

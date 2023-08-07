@@ -19,7 +19,7 @@ where
     D: Deserializer<'de>,
 {
     let feature_strings: Vec<String> = Deserialize::deserialize(deserializer)?;
-    println!("Feature String: {:?}", feature_strings);
+    
     let features = feature_strings
         .iter()
         .map(|feature_string| {

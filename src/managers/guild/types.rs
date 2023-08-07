@@ -15,7 +15,7 @@ impl<'de> Deserialize<'de> for GuildManager {
     {
         // Create and return the GuildManager instance
         let guild_manager = GuildManager {
-            cache: CacheManager::<Guild>::new(),
+            cache: CacheManager::<Guild>::new()
         };
 
         Ok(guild_manager)
