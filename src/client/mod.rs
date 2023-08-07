@@ -2,26 +2,19 @@
 use reqwest::Client as ReqwestClient;
 use serde_json::{Value, json};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
-use tokio::sync::{mpsc::{self, Sender}, Mutex};
-
-use futures_util::{
-    TryStreamExt,
-    stream::StreamExt,
-    sink::SinkExt
-};
+use std::sync::{Mutex, mpsc::Sender};
+use futures_util::stream::StreamExt;
 
 use std::{
     sync::Arc,
-    time::{Duration, Instant},
-    collections::HashMap
+    time::{Duration, Instant}
 };
 
+use crate::util::ws::WebsocketConnection;
 use crate::structs::{
     guild::Guild,
     application_command::ApplicationCommand
 };
-
-use crate::util::rest::post;
 
 pub mod cache;
 pub use cache::types::ClientCache;
@@ -42,25 +35,6 @@ impl Client {
     /// * `intents` - An array of [GatewayIntentBits]. This represents a bitfield
     /// which determines what events your bot will receive. [GatewayIntentBits] directly
     /// maps to https://discord.com/developers/docs/topics/gateway#gateway-intents
-    /// 
-    /// # Example
-    /// ```
-    /// use discord_rs::client::{Client, GatewayIntentBits};
-    /// 
-    /// #[tokio::main]
-    /// async fn main() {
-    ///     let token = "YOUR_TOKEN";
-    ///     let intents = &[
-    ///         GatewayIntentBits::Guilds,
-    ///         GatewayIntentBits::GuildMessages,
-    ///         GatewayIntentBits::DirectMessages
-    ///     ];
-    ///     let mut client = Client::new(token, intents);
-    ///     client.connect(token)
-    ///         .await
-    ///         .expect("Failed to login");
-    /// }
-    /// ```
     pub fn new(token: &str, intents: &[GatewayIntentBits]) -> Self {
         let bits = intents
             .iter()
@@ -71,42 +45,28 @@ impl Client {
         // Make some globally available variables
         std::env::set_var("_CLIENT_TOKEN", token);
         std::env::set_var("_DISCORD_API_URL", format!("https://discord.com/api/v{API_VERSION}"));
-        
-        let rest = Arc::new(Mutex::new(ReqwestClient::new()));
+
+        let websocket = WebsocketConnection::new("wss://gateway.discord.gg/?v=10&encoding=json").unwrap();
 
         Self {
             intents: bits,
             token: token.to_string(),
+            ws: websocket,
             cache: Arc::new(Mutex::new(ClientCache::new())),
-            rest: Arc::clone(&rest),
             events: None,
-            event_callbacks: HashMap::new()
+            //event_callbacks: HashMap::new()
         }
     }
 
-    pub fn on_event(
-        mut self,
-        event_type: GatewayDispatchEventType,
-        callback: impl Fn(&Client) + Send + Sync + 'static,
-    ) -> Self {
-        self.event_callbacks
-            .insert(event_type, Box::new(callback));
-
-        self
-    }
-
     /// Connects the client to the Discord Gateway webhook
-    pub async fn connect(&mut self) -> Result<(), &'static str> {
-        let (socket, _) = connect_async("wss://gateway.discord.gg/?v=10&encoding=json")
-            .await
-            .expect("Failed to connect to gateway");
-
-        let (mut sender, receiver) = socket.split();
+    pub async fn login(&mut self) -> Result<(), &'static str> {
+        let (sender, receiver) = socket.split();
         let (etx, erx) = mpsc::channel::<(GatewayDispatchEventType, Value)>(100);
 
-        // Send the identify payload
-        let identify = _get_identify(&self.token, &self.intents);
-        let _ = sender.send(identify).await;
+        // // Send the identify payload
+        // let identify = _get_identify(&self.token, &self.intents);
+        // let _ = sender.send(identify).await;
+        
         let token = self.token.clone();
         let socket_mutex = Arc::new(Mutex::new(WebsocketConnection { sender, receiver }));
         self.events = Some(erx);
@@ -119,12 +79,6 @@ impl Client {
                 token
             )
         );
-
-        // while let Some(event_type) = erx.recv().await {
-        //     if let Some(callback) = self.event_callbacks.get(&event_type) {
-        //         callback(self);
-        //     }
-        // }
 
         Ok(())
     }

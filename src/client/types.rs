@@ -1,21 +1,14 @@
 #[allow(dead_code, unused_variables, unused_imports)]
 use futures_util::sink::SinkExt;
-use futures_util::stream::{SplitSink, SplitStream};
 use reqwest::Client as ReqwestClient;
 use serde_json::Value;
 use serde::{Serialize, Deserialize};
-use tokio_tungstenite::{WebSocketStream, MaybeTlsStream};
-use tungstenite::Message as TungsteniteMessage;
 use std::{
     ops::Index,
-    collections::HashMap,
-    sync::Arc
-};
-use tokio::{
-    sync::{mpsc::Receiver, Mutex},
-    net::TcpStream
+    sync::{Arc, Mutex, mpsc::Receiver}
 };
 
+use crate::util::ws::WebsocketConnection;
 use crate::client::ClientCache;
 use super::{
     GatewayEventType,
@@ -25,19 +18,16 @@ use super::{
 pub struct Client {
     pub intents: u64,
     pub token: String,
-    pub rest: Arc<Mutex<ReqwestClient>>,
+    pub ws: WebsocketConnection,
     pub cache: Arc<Mutex<ClientCache>>,
     pub events: Option<Receiver<(GatewayDispatchEventType, Value)>>,
-    pub event_callbacks: HashMap<GatewayDispatchEventType, Box<dyn Fn(&Client) + Send + Sync>>,
+    // pub event_callbacks: HashMap<GatewayDispatchEventType, Box<dyn Fn(&Client) + Send + Sync>>,
 }
 pub struct Connection {
     pub socket: WebsocketConnection, 
     pub http_client: ReqwestClient
 }
-pub struct WebsocketConnection {
-    pub sender: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, TungsteniteMessage>,
-    pub receiver: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>
-}
+
 pub struct SessionStartLimitObject {
     pub total: i32,
     pub remaining: i32,

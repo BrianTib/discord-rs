@@ -42,4 +42,5 @@ pub mod structs {
 
 pub mod util {
     pub mod rest;
+    pub mod ws;
 }
