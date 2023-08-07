@@ -1,15 +1,11 @@
 use serde::{Deserialize, Deserializer};
-use reqwest::Client as ReqwestClient;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 use crate::managers::CacheManager;
 use crate::structs::channel::Channel;
 
 #[derive(Debug)]
 pub struct ChannelManager {
-    pub cache: CacheManager<Channel>,
-    pub rest: Arc<Mutex<ReqwestClient>>
+    pub cache: CacheManager<Channel>
 }
 
 impl<'de> Deserialize<'de> for ChannelManager {
@@ -18,8 +14,7 @@ impl<'de> Deserialize<'de> for ChannelManager {
         D: Deserializer<'de>,
     {   
         let channel_manager = ChannelManager {
-            cache: CacheManager::<Channel>::new(),
-            rest: Arc::new(Mutex::new(ReqwestClient::new())),
+            cache: CacheManager::<Channel>::new()
         };
 
         Ok(channel_manager)

@@ -1,22 +1,14 @@
-#![allow(dead_code)]
-use reqwest::Client as ReqwestClient;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-
+#[allow(dead_code)]
 use crate::managers::CacheManager;
-use crate::structs::{
-    channel::Channel
-};
+use crate::structs::channel::Channel;
+use crate::util::rest::get;
 
 pub mod types;
 pub use types::*;
 
 impl ChannelManager {
-    pub fn new(rest: Arc<Mutex<ReqwestClient>>) -> Self {
-        Self {
-            cache: CacheManager::<Channel>::new(),
-            rest
-        }
+    pub fn new() -> Self {
+        Self { cache: CacheManager::<Channel>::new() }
     }
 
     pub async fn set_by_id(&mut self, id: &String) {
@@ -37,7 +29,6 @@ impl ChannelManager {
     }
 
     pub async fn fetch(&mut self, ids: &[&str]) -> Vec<Channel> {
-        let rest = self.rest.lock().await;
         let mut collection = Vec::<Channel>::new();
 
         for id in ids.iter() {
@@ -46,7 +37,7 @@ impl ChannelManager {
                 continue;
             }
 
-            let channel = _fetch(&rest, id).await;
+            let channel = _fetch(id).await;
             collection.push(channel.to_owned());
             self.cache.set(id.to_string(), channel);
         }
@@ -55,20 +46,14 @@ impl ChannelManager {
     }
 
     async fn _patch(&mut self, channel_id: &String) -> Channel {
-        let rest = self.rest.lock().await;
-        let channel = _fetch(&rest, channel_id).await;
+        let channel = _fetch(channel_id).await;
         self.cache.set(channel_id.to_owned(), channel.to_owned());
         channel
     }
 }
 
-async fn _fetch(rest: &ReqwestClient, id: &str) -> Channel {
-    let base_url = std::env::var("_DISCORD_API_URL").unwrap();
-    let token = std::env::var("_CLIENT_TOKEN").unwrap();
-
-    let response = rest.get(format!("{base_url}/channels/{id}"))
-        .header("Authorization", format!("Bot {token}"))
-        .send()
+async fn _fetch(id: &str) -> Channel {
+    let response = get(&format!("/channels/{id}"))
         .await
         .expect(&format!("Failed to fetch guild with id {}", id));
  

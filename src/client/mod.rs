@@ -77,7 +77,7 @@ impl Client {
         Self {
             intents: bits,
             token: token.to_string(),
-            cache: Arc::new(Mutex::new(ClientCache::new(Arc::clone(&rest)))),
+            cache: Arc::new(Mutex::new(ClientCache::new())),
             rest: Arc::clone(&rest),
             events: None,
             event_callbacks: HashMap::new()
