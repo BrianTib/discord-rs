@@ -188,7 +188,6 @@ where
         3 => Ok(PremiumTierLevel::Tier3),
         _ => {
             // Handle unrecognized feature string
-            // You can choose to return an error or fallback to a default value
             unimplemented!("Unrecognized premium tier level: {}", index);
         }
     }
@@ -203,7 +202,6 @@ where
         2 => Ok(GuildScheduledEventPrivacyLevel::GuildOnly),
         _ => {
             // Handle unrecognized feature string
-            // You can choose to return an error or fallback to a default value
             unimplemented!("Unrecognized guild scheduled event privacy level: {}", index);
         }
     }
@@ -221,7 +219,6 @@ where
         4 => Ok(GuildScheduledEventStatus::Cancelled),
         _ => {
             // Handle unrecognized feature string
-            // You can choose to return an error or fallback to a default value
             unimplemented!("Unrecognized guild scheduled event status: {}", index);
         }
     }
@@ -238,7 +235,6 @@ where
         3 => Ok(GuildScheduledEventType::External),
         _ => {
             // Handle unrecognized feature string
-            // You can choose to return an error or fallback to a default value
             unimplemented!("Unrecognized guild scheduled event status: {}", index);
         }
     }

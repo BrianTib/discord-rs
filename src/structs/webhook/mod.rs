@@ -1,7 +1,14 @@
 #[allow(dead_code, unused_imports)]
-use serde_json::{Value};
+use serde_json::Value;
 use std::collections::HashMap;
-use reqwest::Client;
+
+use reqwest::{
+    Error as ReqwestError,
+    blocking::{
+        Client as ReqwestClient,
+        Response,
+    }
+};
 
 use crate::structs::embed::Embed;
 
@@ -20,7 +27,6 @@ pub use errors::{
 impl WebhookClient {
     pub fn new() -> Self {
         Self {
-            client: Client::new(),
             id: None,
             token: None,
             url: None
@@ -92,7 +98,7 @@ impl WebhookClient {
     /// webhook.send(message_payload).await.expect("Failed to send webhook");
     /// ```
 
-    pub async fn send(&self, payload: MessagePayload) -> Result<(), &'static str> {
+    pub fn send(&self, payload: MessagePayload) -> Result<(), &'static str> {
         if self.url.is_none() {
             return Err("No URL for webhook. Consider using WebhookClient::with_credentials() or WebhookClient::with_url()");
         }
@@ -170,12 +176,12 @@ impl WebhookClient {
     
         let url = format!("{}?wait=true", self.url.as_ref().unwrap());
         
+        let client = ReqwestClient::new();
         //println!("body: {:?}", body);
-        let res = self.client
+        let res = client
             .post(&url)
             .json(&body)
-            .send()
-            .await;
+            .send();
 
         if res.is_ok() {
             return Ok(());

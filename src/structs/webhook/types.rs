@@ -1,12 +1,10 @@
 #[allow(dead_code)]
 use crate::structs::embed::Embed;
-use reqwest::Client;
 
 pub struct WebhookClient {
     pub id: Option<String>,
     pub token: Option<String>,
-    pub url: Option<String>,
-    pub client: Client
+    pub url: Option<String>
 }
 
 pub struct MessagePayload {

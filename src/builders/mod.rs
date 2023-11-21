@@ -7,6 +7,3 @@ pub use slash_command::{
     SlashCommandOptionBuilder,
     SlashCommandOptionType
 };
-
-mod client;
-pub use client::ClientBuilder;

@@ -1,19 +1,6 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum AllowedMentionsType {
-    RoleMentions,
-    UserMentions,
-    EveryoneMentions
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum Nonce {
-    NonceString(String),
-    NonceNumber(u64)
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 pub enum MessageActivity {
     Join = 1,
     Spectate = 2,

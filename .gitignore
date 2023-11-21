@@ -5,12 +5,13 @@ target/
 Cargo.lock
 
 # VSCode settings
-.vscode
+.vscode/
 .ignore/
 
 # Testing examples
 src/example.rs
 src/main.rs
+examples/
 
 # Env
 .env

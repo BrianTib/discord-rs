@@ -19,28 +19,33 @@
 pub mod client;
 pub mod managers;
 pub mod builders;
+
 pub mod structs {
-    pub mod application;
     pub mod application_command;
+    pub mod application;
     pub mod attachment;
     pub mod channel;
-    pub mod emoji;
     pub mod embed;
+    pub mod emoji;
     pub mod guild;
+    pub mod locale;
     pub mod member;
+    pub mod message_payload;
     pub mod message;
+    pub mod nonce;
     pub mod permissions;
+    pub mod presence;
     pub mod reaction;
     pub mod role;
+    pub mod snowflake;
+    pub mod sticker;
+    pub mod timestamp;
     pub mod user;
     pub mod webhook;
-    pub mod sticker;
-    pub mod locale;
-    pub mod presence;
-    pub mod snowflake;
 }
 
 pub mod util {
     pub mod rest;
-    pub mod ws;
+    pub mod threadpool;
+    pub mod socket;
 }

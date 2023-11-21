@@ -2,7 +2,6 @@
 use crate::util::rest::get;
 use crate::managers::cache::CacheManager;
 use crate::structs::guild::Guild;
-use crate::util::rest::get;
 
 pub mod types;
 pub use types::*;
@@ -31,7 +30,7 @@ impl GuildManager {
     }
 
     // TODO: Create guild
-    pub async fn fetch(&mut self, ids: &[&str]) -> Vec<Guild> {
+    pub fn fetch(&mut self, ids: &[&str]) -> Vec<Guild> {
         let mut collection = Vec::<Guild>::new();
 
         for id in ids.iter() {
@@ -40,7 +39,7 @@ impl GuildManager {
                 continue;
             }
 
-            let guild = _fetch(id).await;
+            let guild = _fetch(id);
             collection.push(guild.to_owned());
             self.cache.set(id.to_string(), guild);
         }
@@ -49,8 +48,8 @@ impl GuildManager {
     }
 }
 
-async fn _fetch(id: &str) -> Guild {
-    let response = get(&format!("/guilds/{id}")).await.unwrap();
-    let response = response.text().await.unwrap();
+fn _fetch(id: &str) -> Guild {
+    let response = get(&format!("/guilds/{id}")).unwrap();
+    let response = response.text().unwrap();
     serde_json::from_str(&response).unwrap()
 }

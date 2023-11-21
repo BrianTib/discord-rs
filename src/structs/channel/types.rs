@@ -1,7 +1,4 @@
-use reqwest::Client as ReqwestClient;
 use serde::{Deserialize, Deserializer, Serialize};
-use tokio::sync::Mutex;
-use std::sync::Arc;
 
 use crate::structs::{
     member::Member,
@@ -48,8 +45,6 @@ pub struct Channel {
     pub flags: Option<u64>,
     pub version: Option<u64>,
     pub available_tags: Option<Vec<ForumTag>>,
-    #[serde(skip)]
-    pub rest: Option<Arc<Mutex<ReqwestClient>>>,
 }
 
 fn channel_type_deserializer<'de, D>(deserializer: D) -> Result<ChannelType, D::Error>

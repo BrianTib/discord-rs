@@ -11,16 +11,16 @@ impl ChannelManager {
         Self { cache: CacheManager::<Channel>::new() }
     }
 
-    pub async fn set_by_id(&mut self, id: &String) {
-        Self::_patch(self, id).await;
+    pub fn set_by_id(&mut self, id: &String) {
+        Self::_patch(self, id);
     }
 
-    pub async fn set(&mut self, channel: Channel) {
-        Self::_patch(self, &channel.id).await;
+    pub fn set(&mut self, channel: Channel) {
+        Self::_patch(self, &channel.id);
     }
 
-    pub async fn fetch_by_id(&mut self, id: &str) -> Result<Channel, &'static str> {
-        let channels = Self::fetch(self, &[id]).await;
+    pub fn fetch_by_id(&mut self, id: &str) -> Result<Channel, &'static str> {
+        let channels = Self::fetch(self, &[id]);
         if channels.len() == 1 {
             return Ok(channels[0].clone());
         }
@@ -28,7 +28,7 @@ impl ChannelManager {
         Err("Could not find channel")
     }
 
-    pub async fn fetch(&mut self, ids: &[&str]) -> Vec<Channel> {
+    pub fn fetch(&mut self, ids: &[&str]) -> Vec<Channel> {
         let mut collection = Vec::<Channel>::new();
 
         for id in ids.iter() {
@@ -37,7 +37,7 @@ impl ChannelManager {
                 continue;
             }
 
-            let channel = _fetch(id).await;
+            let channel = _fetch(id);
             collection.push(channel.to_owned());
             self.cache.set(id.to_string(), channel);
         }
@@ -46,14 +46,14 @@ impl ChannelManager {
     }
 
     async fn _patch(&mut self, channel_id: &String) -> Channel {
-        let channel = _fetch(channel_id).await;
+        let channel = _fetch(channel_id);
         self.cache.set(channel_id.to_owned(), channel.to_owned());
         channel
     }
 }
 
-async fn _fetch(id: &str) -> Channel {
-    let response = get(&format!("/channels/{id}")).await.unwrap();
-    let response = response.text().await.unwrap();
+fn _fetch(id: &str) -> Channel {
+    let response = get(&format!("/channels/{id}")).unwrap();
+    let response = response.text().unwrap();
     serde_json::from_str(&response).unwrap()
 }

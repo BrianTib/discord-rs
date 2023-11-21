@@ -3,47 +3,68 @@ use serde_json::Value;
 use serde_with::skip_serializing_none;
 
 use crate::structs::{
-    channel::{Channel, ChannelMention},
-    member::Member,
-    role::Role,
-    reaction::Reaction,
-    message::enums::{MessageType, MessageActivity, AllowedMentionsType},
+    application::Application,
     attachment::Attachment,
-    user::User
+    channel::{Channel, ChannelMention},
+    embed::Embed,
+    member::Member,
+    message::enums::{MessageType, MessageActivity},
+    reaction::Reaction,
+    role::Role,
+    snowflake::Snowflake,
+    sticker::Sticker,
+    user::User,
+    nonce::Nonce
 };
-
-use crate::structs::embed::Embed;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Message {
-    pub attachments: Vec<Attachment>,
+    /// id of the message
+    pub id: Snowflake,
+    /// id of the channel the message was sent in
+    pub channel_id: Option<Snowflake>,
     pub author: User,
-    pub channel_id: Option<String>,
-    #[serde(skip)]
-    pub channel: Option<Channel>,
-    pub components: Vec<Value>,
     pub content: String,
-    pub edited_timestamp: Option<String>,
-    pub embeds: Vec<Embed>,
-    pub flags: Option<u64>,
-    pub guild_id: Option<String>,
-    pub id: String,
-    pub member: Option<Member>,
-    pub mention_channels: Option<Vec<ChannelMention>>,
-    pub mention_everyone: bool,
-    pub mention_roles: Vec<Role>,
-    pub mentions: Vec<Value>,
-    pub pinned: bool,
-    pub reactions: Option<Vec<Reaction>>,
-    pub nonce: Option<String>,
-    pub webhook_id: Option<String>,
-    pub activity: Option<MessageActivity>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub referenced_message: Option<Box<Message>>,
+    // TODO: ISO8601 timestamp
     pub timestamp: String,
+    // TODO: ISO8601 timestamp
+    pub edited_timestamp: Option<String>,
     pub tts: bool,
+    pub mention_everyone: bool,
+    pub mentions: Vec<Value>,
+    pub mention_roles: Vec<Role>,
+    pub mention_channels: Option<Vec<ChannelMention>>,
+    pub attachments: Vec<Attachment>,
+    pub embeds: Vec<Embed>,
+    pub reactions: Option<Vec<Reaction>>,
+    pub nonce: Option<Nonce>,
+    pub pinned: bool,
+    pub webhook_id: Option<Snowflake>,
     #[serde(rename = "type", deserialize_with = "deserialize_message_type")]
     pub message_type: MessageType,
+    pub activity: Option<MessageActivity>,
+    pub application: Option<Application>,
+    pub application_id: Option<Snowflake>,
+    pub flags: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub referenced_message: Option<Box<Message>>,
+    // TODO: Make this a MessageInteraction object https://discord.com/developers/docs/interactions/receiving-and-responding#message-interaction-object-message-interaction-structure
+    pub interaction: Option<Value>,
+    pub thread: Option<Channel>,
+    // TODO: Make this a Component object https://discord.com/developers/docs/interactions/message-components#component-object
+    pub components: Option<Vec<Value>>,
+    // TODO: Make this a StickerItem object https://discord.com/developers/docs/resources/sticker#sticker-item-object
+    pub sticker_items: Option<Vec<Value>>,
+    pub stickers: Option<Vec<Sticker>>,
+    pub position: Option<usize>,
+    // TODO: Make this a RoleSubscriptionData object https://discord.com/developers/docs/resources/channel#role-subscription-data-object
+    pub role_subscription_data: Option<Value>,
+    // TODO: Make this is a ResolvedData object https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-resolved-data-structure
+    pub resolved: Option<Value>,
+    #[serde(skip)]
+    pub channel: Option<Channel>,
+    pub guild_id: Option<String>,
+    pub member: Option<Member>,
 }
 
 // #[derive(Serialize, Deserialize, Debug)]
@@ -57,33 +78,12 @@ pub struct Message {
 //     pub username: String,
 // }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AllowedMentions {
-    pub parse: Vec<AllowedMentionsType>,
-    // Max size 100
-    pub roles: Vec<String>,
-    // Max size 100
-    pub users: Vec<String>,
-    pub replied_user: bool
-}
-
-// Dont serialize any of the optionals if they are of the None variant
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MessagePayload {
-    pub content: Option<String>,
-    pub embeds: Option<Vec<Embed>>,
-    pub username: Option<String>,
-    pub avatar_url: Option<String>,
-    pub tts: Option<bool>,
-    pub allowed_mentions: Option<AllowedMentions>
-}
-
 fn deserialize_message_type<'de, D>(deserializer: D) -> Result<MessageType, D::Error>
 where
     D: Deserializer<'de>,
 {
     let message_type_index: u16 = Deserialize::deserialize(deserializer)?;
+    
     match message_type_index {
         0 => Ok(MessageType::Default),
         1 => Ok(MessageType::RecipientAdd),
@@ -118,5 +118,25 @@ where
         30 => Ok(MessageType::StageTopic),
         31 => Ok(MessageType::GuildApplicationPremiumSubscription),
         _ => Err(serde::de::Error::custom("Invalid message type index"))
+    }
+}
+
+// impl TryFrom<Value> for Message {
+//     type Error = &'static str;
+
+//     fn try_from(value: Value) -> Result<Message, &'static str> {
+//         let message = value.try_into();
+
+//         if let Ok(message) = message {
+//             return Ok(message);
+//         }
+
+//         panic!("Failed to deserialize message from value");
+//     }
+// }
+
+impl From<Value> for Message {
+    fn from(value: Value) -> Self {
+        serde_json::from_value(value).unwrap()
     }
 }

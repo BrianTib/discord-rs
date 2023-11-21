@@ -15,12 +15,15 @@ use crate::structs::{
 };
 
 pub type SlashCommandBuilder = ApplicationCommand;
+pub type SlashCommandOptionBuilder = ApplicationCommandOption;
+pub type SlashCommandOptionType = ApplicationCommandOptionType;
+
 impl SlashCommandBuilder {
     pub fn new(application_id: &str) -> Self {
         let mut snowflake = SnowflakeBuilder::new(1);
 
         Self {
-            id: snowflake.generate_id(),
+            id: snowflake.generate_id().to_string(),
             command_type: ApplicationCommandType::ChatInput,
             application_id: application_id.to_string(),
             guild_id: None,
@@ -33,7 +36,7 @@ impl SlashCommandBuilder {
             dm_permissions: None,
             default_permissions: None,
             nsfw: None,
-            version: snowflake.generate_id(),
+            version: snowflake.generate_id().to_string(),
         }
     }
 
@@ -207,13 +210,12 @@ impl SlashCommandBuilder {
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(self)
     }
+
     // pub fn build(self) -> ApplicationCommand {
     //     ApplicationCommand { ..self }
     // }
 }
 
-pub type SlashCommandOptionBuilder = ApplicationCommandOption;
-pub type SlashCommandOptionType = ApplicationCommandOptionType;
 impl SlashCommandOptionBuilder {
     pub fn new(option_type: SlashCommandOptionType) -> Self {
         Self {
