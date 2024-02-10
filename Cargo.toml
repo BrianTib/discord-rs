@@ -1,20 +1,18 @@
 [package]
 name = "discord-rs"
-description = "A rust library for interacting with the Discord API in a blazingly fast way"
 version = "0.2.0"
+description = "A rust library for interacting with the Discord API in a blazingly fast way"
+
 authors = ["Brian T. <bptiburcio@gmail.com>"]
-
-license = "MIT"
-keywords = ["discord", "chat", "bot", "api", "voice"]
+categories = ["api-bindings"]
 documentation = "https://docs.rs/discord-rs"
-
-repository = "https://github.com/BrianTiburcio/discord-rs"
+keywords = ["discord", "chat", "bot", "api"]
+license = "MIT"
 readme = "README.md"
+repository = "https://github.com/BrianTib/discord-rs"
 
 edition = "2021"
-rust-version = "1.74.0"
-
-categories = ["api-bindings"]
+rust-version = "1.75.0"
 
 include = [
     "**/*.rs",
@@ -24,21 +22,26 @@ include = [
 exclude = [
     ".ignore/*",
     "assets/*",
+    "tests/*",
     "examples/*",
     "src/examples/*",
     "target/*"
 ]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+doctest = false
+
+[features]
+webhooks = []
 
 [dependencies]
+chrono = "0.4.33"
 dotenv = "0.15.0"
 native-tls = "0.2.11"
-chrono = "0.4.31"
-reqwest = { version = "0.11.22", features = ["blocking", "json"] }
-serde = { version = "1.0.192", features = ["derive"] }
-serde_json = "1.0.108"
-serde_repr = "0.1.17"
-serde_with = "3.4.0"
-tungstenite = { version = "0.20.1", features = ["native-tls"] }
-url = "2.4.1"
+reqwest = { version = "0.11.24", features = ["blocking", "json"] }
+serde = { version = "1.0.196", features = ["derive"] }
+serde_json = "1.0.113"
+serde_repr = "0.1.18"
+serde_with = "3.6.0"
+tungstenite = { version = "0.21.0", features = ["native-tls"] }
+url = "2.5.0"

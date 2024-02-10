@@ -45,7 +45,7 @@ impl ChannelManager {
         collection
     }
 
-    async fn _patch(&mut self, channel_id: &String) -> Channel {
+    fn _patch(&mut self, channel_id: &String) -> Channel {
         let channel = _fetch(channel_id);
         self.cache.set(channel_id.to_owned(), channel.to_owned());
         channel

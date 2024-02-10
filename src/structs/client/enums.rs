@@ -117,10 +117,13 @@ pub enum ExternalDispatchEvent {
     VoiceServerUpdate
 }
 
-/// [GatewayDispatch](https://discord.com/developers/docs/topics/gateway-events#gateway-events) events
 #[derive(Debug, Copy, Clone)]
+/// [Discord's Gateway Dispatch events](https://discord.com/developers/docs/topics/gateway-events#gateway-events) events
+/// 
+/// [DispatchEvent::Internal] events are meant to be handled by discord-rs
+/// [DispatchEvent::External] events are meant to be handled by the library user
 pub enum DispatchEvent {
-    /// GatewayDispatchEvent(s) which are meant to be handled by discord-rs
+    /// [GatewayDispatchEvent](s) which are meant to be handled by discord-rs
     Internal(InternalDispatchEvent),
     /// GatewayDispatchEvent(s) which are meant to be handled by the end-user
     External(ExternalDispatchEvent)

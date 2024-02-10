@@ -1,4 +1,4 @@
-pub use crate::client::{
+pub use crate::structs::client::{
     Client,
     GatewayIntents
 };

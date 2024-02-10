@@ -23,25 +23,6 @@ impl AllowedMentionsType {
     }
 }
 
-impl Default for MessagePayload {
-    fn default() -> Self {
-        Self {
-            content: Default::default(),
-            embeds: Default::default(),
-            tts: Default::default(),
-            allowed_mentions: Default::default(),
-            nonce: Default::default(),
-            message_reference: Default::default(),
-            components: Default::default(),
-            sticker_ids: Default::default(),
-            files: Default::default(),
-            payload_json: Default::default(),
-            attachments: Default::default(),
-            flags: Default::default(),
-        }
-    }
-}
-
 impl MessagePayload {
     pub fn new() -> Self {
         Self::default()

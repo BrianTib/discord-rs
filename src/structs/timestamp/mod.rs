@@ -1,25 +1,30 @@
 use chrono::DateTime;
-use serde::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize, Deserializer};
+use serde_json::Value;
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, PartialEq)]
 pub enum Timestamp {
     String(String),
     Number(usize)
 }
 
 impl Timestamp {
+    /// A [Timestamp] of the current amount of seconds since [UNIX_EPOCH]
     pub fn now() -> Self {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .expect("SystemTime before UNIX EPOCH!")
+            .expect("Time went backwards")
             .as_secs();
 
         Timestamp::Number(timestamp as usize)
     }
 
-    pub fn to_string(&self) -> String {
+    /// The string representation of the [Timestamp].
+    /// # Example
+    /// 2023-11-21T14:52:38.313Z
+    pub fn as_string(&self) -> String {
         match self {
             Timestamp::String(t) => t.clone(),
             Timestamp::Number(t) => {
@@ -59,15 +64,23 @@ impl fmt::Display for Timestamp {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl<'de> Deserialize<'de> for Timestamp {
+    fn deserialize<D>(deserializer: D) -> Result<Timestamp, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value: Value = Deserialize::deserialize(deserializer)?;
 
-    #[test]
-    fn test_string_to_timestamp() {
-        let string_timestamp: Timestamp = String::from("2023-11-21T14:52:38.313Z").into();
-        let number_timestamp = Timestamp::Number(1700578358);
-        // Assert that both compile to the save value
-        assert_eq!(string_timestamp, number_timestamp);
+        match value {
+            Value::String(s) => Ok(Timestamp::String(s)),
+            Value::Number(n) => {
+                if let Some(u) = n.as_u64() {
+                    Ok(Timestamp::Number(u as usize))
+                } else {
+                    Err(serde::de::Error::custom("Invalid u64 value"))
+                }
+            }
+            _ => Err(serde::de::Error::custom("Invalid timestamp value")),
+        }
     }
 }

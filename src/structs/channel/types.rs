@@ -1,4 +1,5 @@
 use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value;
 
 use crate::structs::{
     member::Member,
@@ -8,7 +9,8 @@ use crate::structs::{
 use super::{
     ChannelType,
     PermissionType,
-    permission_type_deserializer
+    permission_type_deserializer,
+    channel_type_deserializer
 };
 
 //https://discord.com/developers/docs/resources/channel#channels-resource
@@ -45,28 +47,6 @@ pub struct Channel {
     pub flags: Option<u64>,
     pub version: Option<u64>,
     pub available_tags: Option<Vec<ForumTag>>,
-}
-
-fn channel_type_deserializer<'de, D>(deserializer: D) -> Result<ChannelType, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let channel_type_index: u16 = Deserialize::deserialize(deserializer)?;
-    match channel_type_index {
-        0 => Ok(ChannelType::GuildText),
-        1 => Ok(ChannelType::DM),
-        2 => Ok(ChannelType::GuildVoice),
-        3 => Ok(ChannelType::GroupDM),
-        4 => Ok(ChannelType::GuildCategory),
-        5 => Ok(ChannelType::GuildAnnouncement),
-        10 => Ok(ChannelType::AnnouncementThread),
-        11 => Ok(ChannelType::PublicThread),
-        12 => Ok(ChannelType::PrivateThread),
-        13 => Ok(ChannelType::GuildStageVoice),
-        14 => Ok(ChannelType::GuildDirectory),
-        15 => Ok(ChannelType::GuildForum),
-        _ => Err(serde::de::Error::custom("Invalid message type index"))
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

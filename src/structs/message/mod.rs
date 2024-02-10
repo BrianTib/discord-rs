@@ -1,4 +1,5 @@
 //use crate::client::ClientCache;
+use crate::structs::channel::Channel;
 
 pub mod enums;
 pub use enums::*;
@@ -26,10 +27,34 @@ impl Message {
     //     Self::reply(self, payload)
     // }
 
+    pub fn get_channel(&mut self) -> &Channel {
+        todo!()
+
+        // if self.channel.is_some() {
+        //     return Ok(*self.channel)
+        // }
+
+        // if let Some(channel) = &self.channel {
+        //     return Ok(channel);
+        // }
+
+        // if let Some(channel_id) = self.channel_id.take() {
+        //     let channel = Channel::new(&channel_id)?;
+        //     self.channel = Some(channel);
+            
+        //     if let Some(channel) = &self.channel {
+        //         Ok(channel)
+        //     } else {
+        //         Err("Failed to obtain channel")
+        //     }
+        // } else {
+        //     Err("No channel to get")
+        // }
+    }
+
     /// Whether or not the message can be deleted
     pub fn is_deletable(&self) -> bool {
-        match self.message_type {
-            MessageType::Default
+        matches!(self.message_type, MessageType::Default
             | MessageType::ChannelPinnedMessage
             | MessageType::UserJoin
             | MessageType::GuildBoost
@@ -50,9 +75,8 @@ impl Message {
             | MessageType::StageEnd
             | MessageType::StageSpeaker
             | MessageType::StageTopic
-            | MessageType::GuildApplicationPremiumSubscription => true,
-            _ => false,
-        }
+            | MessageType::GuildApplicationPremiumSubscription
+        )
     }
 
     // Sends payloads which may include text, embeds, tts and more to the channel

@@ -28,7 +28,7 @@ pub struct AllowedMentions {
 
 // Dont serialize any of the optionals if they are of the None variant
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Default, Serialize, Deserialize, Debug)]
 pub struct MessagePayload {
     pub content: Option<String>,
     pub nonce: Option<Nonce>,

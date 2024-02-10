@@ -1,6 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Serialize, Deserialize, Deserializer};
 use serde_json::Value;
+use std::fmt;
 
 pub struct SnowflakeBuilder {
     worker_id: u16,
@@ -39,20 +40,20 @@ impl<'de> Deserialize<'de> for Snowflake {
     }
 }
 
-impl ToString for Snowflake {
-    fn to_string(&self) -> String {
-        match self {
-            Snowflake::String(s) => s.to_owned(),
-            Snowflake::Number(s) => s.to_string(),
-        }
-    }
-}
-
 impl From<Snowflake> for u64 {
     fn from(value: Snowflake) -> Self {
         match value {
             Snowflake::String(s) => s.parse::<u64>().unwrap_or(0),
             Snowflake::Number(s) => s,
+        }
+    }
+}
+
+impl fmt::Display for Snowflake {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Snowflake::String(snowflake) => write!(f, "{}", snowflake),
+            Snowflake::Number(snowflake) => write!(f, "{}", snowflake.to_string()),
         }
     }
 }

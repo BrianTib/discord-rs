@@ -1,6 +1,5 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
-use serde_with::skip_serializing_none;
 
 use crate::structs::{
     application::Application,
@@ -66,6 +65,26 @@ pub struct Message {
     pub guild_id: Option<String>,
     pub member: Option<Member>,
 }
+
+// impl<'de> Deserialize<'de> for Message {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: Deserializer<'de>,
+//     {
+//         println!("Beginning deserialize");
+//         let mut message: Message = Deserialize::deserialize(deserializer)?;
+
+//         if let Some(channel_id) = message.channel_id {
+//             let channel = Channel::new(&channel_id)
+//                 .expect("Failed to deserialize channel");
+
+//             message.channel = Some(channel);
+//         }
+
+//         println!("Success! Returning...");
+//         Ok(message)
+//     }
+// }
 
 // #[derive(Serialize, Deserialize, Debug)]
 // pub struct Author {

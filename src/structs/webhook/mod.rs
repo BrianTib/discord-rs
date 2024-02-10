@@ -247,18 +247,18 @@ impl MessagePayload {
 
     /// Sets the embeds of the message.
     ///
-    /// # Arguments
+    /// ## Arguments
     ///
     /// * `embeds` - An array slice of `Embed` objects representing the embeds to set.
     ///
-    /// # Errors
+    /// ## Errors
     ///
     /// Returns an `Err` variant if the length of `embeds` exceeds the maximum allowed by the Discord API.
     ///
-    /// # Examples
+    /// ## Examples
     ///
     /// ```
-    /// use discord-rs::webhook::MessagePayload;
+    /// use discord_rs::webhook::MessagePayload;
     /// 
     /// let embeds = vec![embed1, embed2];
     /// 

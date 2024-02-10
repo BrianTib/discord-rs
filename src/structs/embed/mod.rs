@@ -14,18 +14,8 @@ pub use types::{
     EmbedVideo,
 };
 
-impl Embed {
-    /// Creates a rich Embed object
-    /// # Example
-    /// ```
-    /// use discord-rs::embed::Embed;
-    /// 
-    /// let embed = Embed::new();
-    /// embed.set_author("Discord-rs", None, None, None)
-    ///     .set_title("A new rich embed")
-    ///     .set_description("A new rich embed has appeared")
-    /// ```
-    pub fn new() -> Self {
+impl Default for Embed {
+    fn default() -> Self {
         Self {
             title: None,
             embed_type: EmbedTypes::Rich as u8,
@@ -41,6 +31,22 @@ impl Embed {
             author: None,
             fields: None,
         }
+    }
+}
+
+impl Embed {
+    /// Creates a rich Embed object
+    /// # Example
+    /// ```
+    /// use discord-rs::embed::Embed;
+    /// 
+    /// let embed = Embed::new();
+    /// embed.set_author("Discord-rs", None, None, None)
+    ///     .set_title("A new rich embed")
+    ///     .set_description("A new rich embed has appeared")
+    /// ```
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn set_author(&mut self,
@@ -408,10 +414,10 @@ impl Embed {
     ///
     /// * `pretty` - Whether to include indenting and line-breaking the make the output more human friendly.
     pub fn to_json(&self, pretty: bool) -> String {
-        if pretty == true {
+        if pretty {
             return serde_json::to_string_pretty(self).expect("Could not stringify embed");
         }
 
-        return serde_json::to_string(self).expect("Could not stringify embed");
+        serde_json::to_string(self).expect("Could not stringify embed")
     }
 }

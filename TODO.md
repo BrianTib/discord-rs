@@ -1,0 +1,2 @@
+TODO: Handle reconnections to the right socket whenever the client disconnects
+TODO: Separate messages into different message structs and unify them with an enum (DMMessage, GuildMessage, ThreadMessage etc.)

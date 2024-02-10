@@ -26,13 +26,14 @@ pub fn post(path: &str, body: &str) -> Result<Response, RequestError> {
     perform_request("POST", path, Some(body))
 }
 
-pub fn patch(path: &str, body: &str) -> Result<Response, RequestError> {
-    perform_request("PATCH", path, Some(body))
-}
+// UNUSED YET
+// pub fn patch(path: &str, body: &str) -> Result<Response, RequestError> {
+//     perform_request("PATCH", path, Some(body))
+// }
 
-pub fn put(path: &str, body: &str) -> Result<Response, RequestError> {
-    perform_request("PUT", path, Some(body))
-}
+// pub fn put(path: &str, body: &str) -> Result<Response, RequestError> {
+//     perform_request("PUT", path, Some(body))
+// }
 
 fn perform_request(
     method: &str,

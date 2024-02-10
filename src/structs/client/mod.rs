@@ -1,4 +1,3 @@
-//use native_tls::TlsStream;
 use serde_json::{json, Value};
 use std::{
     sync::{Arc, Mutex, mpsc::{self, Receiver}},
@@ -6,22 +5,31 @@ use std::{
     time::{Instant, Duration}
 };
 
-use crate::util::socket::{Message, Socket};
+use crate::{
+    util::socket::{Message, Socket},
+    util::env::{set_client_token, set_api_url},
+    structs::timestamp::Timestamp,
+    managers::{
+        ClientManager,
+        ChannelManager,
+        GuildManager
+    }
+};
 
 mod enums;
-mod types;
+mod structs;
 
 pub use enums::*;
-pub use types::*;
+pub use structs::*;
 
-// The gateway version of Discord's API to use
+/// The gateway version of Discord's API to use
 const API_VERSION: u8 = 10;
 
 impl Client {
     pub fn new(token: &str, intents: &[GatewayIntents]) -> Self {
-        // Make some globally available variables
-        std::env::set_var("_CLIENT_TOKEN", token);
-        std::env::set_var("_DISCORD_API_URL", format!("https://discord.com/api/v{API_VERSION}"));
+        // Make some globally-available env vars
+        set_client_token(token);
+        set_api_url(&API_VERSION);
 
         // Condense the intent permissions into bits
         let intents = intents
@@ -30,7 +38,14 @@ impl Client {
                 acc | (1 << *intent as usize)
             });
 
-        Self { intents }
+        Self {
+            cache: ClientManager::new(),
+            channels: ChannelManager::new(),
+            guilds: GuildManager::new(),
+            ready_at: Timestamp::now(),
+            token: token.to_string(),
+            intents
+        }
     }
 
     /// Connects to Discord's gateway API and begins
@@ -44,12 +59,14 @@ impl Client {
 
         let (tx, rx) = mpsc::channel();
 
+        //let caches = Arc::new(Mutex::new((self.guilds, self.channels)));
         // Handle the incoming events as well as heartbeating
         // on a separate thread to ensure concurrency
         let _event_handler_thread = _handle_events(
             Arc::clone(&socket),
             tx,
-            self.intents
+            self.intents,
+            //Arc::clone(&caches)
         );
 
         // Ideally here we'd yield the receiver
@@ -57,7 +74,7 @@ impl Client {
         
         // yield Ok(rx);
 
-        // Join the executuion of the event loop to the main
+        // Join the execution of the event loop to the main
         // thread so that the main thread doesnt exit until
         // the event handler loop is done, which ideally
         // shouldnt happen as long as the bot is active
@@ -126,14 +143,18 @@ fn _handle_events(
                                 .and_then(|dispatch_type| Some(DispatchEventIndexer[dispatch_type]))
                                 .expect("Failed to deserialize event type for dispatch event");
 
-                            // TODO: Patch the cache before forwarding the event to the end-user
-                            //_patch_cache(&client.cache, &dispatch_type, &dispatch_data);
-
-                            //println!("DispatchEvent({:?}): {:#?}", &dispatch_type, dispatch_data);
-
                             // Only inform the end user of dispatch events that they can handle
                             if let DispatchEvent::External(dispatch_type) = dispatch_type {
-                                dispatch_sender.send((dispatch_type, dispatch_data)).unwrap();
+                                // TODO: Patch the cache before forwarding the event to the end-user
+                                // _patch_cache(
+                                //     Arc::clone(&caches), 
+                                //     &dispatch_type, 
+                                //     &dispatch_data
+                                // );
+
+                                // Depending on the type of event, we can update some cache
+                                // Allow the event to be handled by the end-user
+                                let _ = dispatch_sender.send((dispatch_type, dispatch_data));
                             }
                         },
                         GatewayEvent::Heartbeat => {
@@ -153,8 +174,18 @@ fn _handle_events(
                         },
                         // Connection was likely dropped on discord's end. Mend it
                         GatewayEvent::Reconnect => {
-                            //let _ = ws.reconnect(None);
-                            panic!("Disconnected from the socket!")
+                            let token = std::env::var("_CLIENT_TOKEN")
+                                .expect("Could not get user token!");
+
+                            // TODO: Create new connection
+                            // Get and send the identify payload
+                            // This allows to start receiving other events
+                            let identify = _get_identify(&token, &intents);
+                            let _ = socket.send(identify)
+                                .expect("Failed to send identify payload");
+
+                            panic!("Disconnected from the socket!");
+
                         },
                         GatewayEvent::RequestGuildMembers => {
                             println!("Got request guild members event: {:#?}", event);
@@ -176,11 +207,13 @@ fn _handle_events(
                             let data = event.d.unwrap();
 
                             if let Some(new_interval) = data.get("heartbeat_interval") {
-                                let new_interval = new_interval.as_u64().expect("Could not assign the interval from hello event");
+                                let new_interval = new_interval.as_u64()
+                                    .expect("Could not retrieve the interval from hello event");
+
                                 interval = Duration::from_millis(new_interval);
-                                // 0.25 is an arbitraily chosen value meant to represent the jitter
+                                // 0.25 is an arbitrarily chosen value meant to represent the jitter
                                 // Since the jitter is only needed once, this is a better approach
-                                // than using true randomness
+                                // than using an entire library to create the suggested randomness
                                 next_heartbeat = Instant::now() + Duration::from_millis(((new_interval as f32) * 0.1) as u64);
                             }
                         },
@@ -190,16 +223,26 @@ fn _handle_events(
                         },
                     };
                 },
-                Message::Binary(_) => {}
-                Message::Ping(_) => {},
-                Message::Pong(_) => {},
                 Message::Close(_) => { break; },
-                Message::Frame(_) => {},
+                // Message::Binary(_) => {}
+                // Message::Frame(_) => {},
+                // Message::Ping(_) => {},
+                // Message::Pong(_) => {},
+                _ => { break; }
             }
         }
     })
 }
 
+fn _patch_cache(
+    caches: Arc<Mutex<(GuildManager, ChannelManager)>>,
+    dispatch_type: &ExternalDispatchEvent,
+    dispatch_data: &Value
+) {
+    
+}
+
+// Returns a heartbeat structure to send to Discord
 fn _get_heartbeat(sequence: usize) -> Message {
     let heartbeat = GatewayEventBody {
         op: GatewayEvent::Heartbeat as usize,

@@ -1,9 +1,12 @@
 mod cache;
-mod guild;
 mod channel;
-mod events;
+mod guild;
+mod client;
 
-pub use cache::CacheManager;
-pub use guild::GuildManager;
-pub use channel::ChannelManager;
-pub use events::EventManager;
+#[allow(unused_imports)]
+pub(crate) use {
+    cache::CacheManager,
+    channel::ChannelManager,
+    guild::GuildManager,
+    client::ClientManager
+};
